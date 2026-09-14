@@ -204,7 +204,7 @@ export default function DeliveryZonesView({
                     {zone.feeKobo === 0 ? (
                       <span className='text-primary-700 font-medium'>Free</span>
                     ) : (
-                      formatCurrency(zone.feeKobo / 100)
+                      formatCurrency(zone.feeKobo)
                     )}
                   </td>
                   <td className='px-5 py-3.5'>

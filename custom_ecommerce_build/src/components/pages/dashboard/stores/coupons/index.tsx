@@ -213,7 +213,7 @@ export default function CouponsView({ storeSlug }: { storeSlug: string }) {
                   <td className='px-5 py-3.5'>
                     {coupon.type === CouponType.PERCENTAGE
                       ? `${coupon.value}% off`
-                      : `${formatCurrency(coupon.value / 100)} off`}
+                      : `${formatCurrency(coupon.value)} off`}
                   </td>
                   <td className='px-5 py-3.5'>
                     {coupon.usedCount}
