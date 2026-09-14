@@ -1,0 +1,27 @@
+# ── Root ignore for the whole monorepo ─────────────────────────────────────────
+# `custom_ecommerce_build/` and `mobile/` carry their own .gitignore files as
+# well; this one covers what neither of them can see.
+
+# Dependencies — including packages/core's scoped install, which has no ignore
+# file of its own above it.
+node_modules/
+
+# Secrets. The per-app ignores already list these; repeated here because this
+# repository is PUBLIC and a single miss is a leaked key.
+.env
+.env.*
+!.env.example
+*.pem
+
+# Per-user Claude Code settings. The `.local` variant is personal by convention
+# and can contain permission rules with pasted commands, tokens included.
+**/.claude/settings.local.json
+
+# OS noise
+.DS_Store
+
+# Competitor teardown screenshots. They contain a real person's name, phone
+# number, bank account number and customers' names — not something to publish.
+# The written analysis (FINDINGS.md) is kept.
+mobile/product-research/*
+!mobile/product-research/FINDINGS.md

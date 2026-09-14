@@ -1,0 +1,1238 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600&display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f8f7f4;
+            font-family:
+              'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #337f53;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #0f2518;
+          }
+          * {
+            box-sizing: border-box;
+          }
+
+          @media (prefers-reduced-motion: no-preference) {
+            @keyframes dcRise {
+              from {
+                opacity: 0;
+                transform: translateY(14px);
+              }
+              to {
+                opacity: 1;
+                transform: none;
+              }
+            }
+            @keyframes dcFlow {
+              to {
+                stroke-dashoffset: -24;
+              }
+            }
+            @keyframes dcPulse {
+              0%,
+              100% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.16);
+              }
+            }
+            .rise {
+              animation: dcRise 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            }
+            .pulse {
+              animation: dcPulse 2.6s ease-in-out infinite;
+              transform-origin: center;
+            }
+            .flow {
+              stroke-dasharray: 6 6;
+              animation: dcFlow 1.1s linear infinite;
+            }
+            .btn:active {
+              transform: scale(0.985);
+              filter: brightness(0.97);
+            }
+          }
+          .btn {
+            transition:
+              transform 0.14s ease,
+              filter 0.14s ease;
+          }
+        </style>
+      </helmet>
+
+      <div style="width: 390px; background: #f8f7f4; color: #0f2518">
+        <!-- Header. In-app browsers eat vertical space, so this stays 56px. -->
+        <div
+          style="
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #e4e2db;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 8px">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="1.5"
+                y="6.5"
+                width="21"
+                height="15"
+                rx="2.5"
+                stroke="#0F2518"
+                stroke-width="1.7"
+              />
+              <path d="M1.5 11.5h21" stroke="#0F2518" stroke-width="1.7" />
+              <circle cx="17.5" cy="16.5" r="1.6" fill="#4DBF7D" />
+            </svg>
+            <span
+              style="
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 17px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+              "
+              >{{brandName}}</span
+            >
+          </div>
+          <a
+            href="#"
+            class="btn"
+            style="
+              display: inline-flex;
+              align-items: center;
+              height: 38px;
+              padding: 0 16px;
+              border-radius: 4px;
+              background: #4dbf7d;
+              border: 1px solid #4dbf7d;
+              color: #ffffff;
+              font-size: 14.5px;
+              font-weight: 500;
+            "
+            >Get started</a
+          >
+        </div>
+
+        <!-- Hero -->
+        <div style="padding: 32px 20px 36px">
+          <div
+            class="rise"
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 7px;
+              height: 28px;
+              padding: 0 11px;
+              border-radius: 999px;
+              background: #dbf2e5;
+              color: #337f53;
+              font-size: 12.5px;
+              font-weight: 600;
+              margin-bottom: 20px;
+            "
+          >
+            <span
+              class="pulse"
+              style="
+                width: 6px;
+                height: 6px;
+                border-radius: 999px;
+                background: #4dbf7d;
+                display: inline-block;
+              "
+            ></span>
+            Nigerian sellers · Naira only
+          </div>
+          <h1
+            class="rise"
+            style="
+              animation-delay: 0.05s;
+              margin: 0;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 39px;
+              line-height: 1.04;
+              font-weight: 700;
+              letter-spacing: -0.03em;
+              text-wrap: pretty;
+            "
+          >
+            Take the order. Get paid. Straight to your bank.
+          </h1>
+          <p
+            class="rise"
+            style="
+              animation-delay: 0.11s;
+              margin: 18px 0 0;
+              font-size: 17px;
+              line-height: 1.55;
+              color: #585b5d;
+            "
+          >
+            A real shop with a cart, card and transfer checkout, delivery fees
+            by area and coupon codes. Paystack settles every sale into your own
+            account. We never hold your money.
+          </p>
+          <div
+            class="rise"
+            style="
+              animation-delay: 0.17s;
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              margin-top: 26px;
+            "
+          >
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 52px;
+                border-radius: 4px;
+                background: #4dbf7d;
+                border: 1px solid #4dbf7d;
+                color: #ffffff;
+                font-size: 17px;
+                font-weight: 500;
+              "
+              >Get your store</a
+            >
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 9px;
+                height: 52px;
+                border-radius: 4px;
+                background: #ffffff;
+                border: 1px solid #d6d8d9;
+                color: #0f2518;
+                font-size: 17px;
+                font-weight: 500;
+              "
+            >
+              Browse a live store
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 8h10M9 4l4 4-4 4"
+                  stroke="#4DBF7D"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Product proof: the storefront itself, not a device frame -->
+        <div
+          style="
+            margin: 0 20px 40px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e4e2db;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 14px 16px;
+              border-bottom: 1px solid #efede8;
+            "
+          >
+            <div style="display: flex; align-items: center; gap: 8px">
+              <div
+                style="
+                  width: 24px;
+                  height: 24px;
+                  border-radius: 999px;
+                  background: #7a2e8c;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: #ffffff;
+                  font-size: 11px;
+                  font-weight: 600;
+                "
+              >
+                AF
+              </div>
+              <span style="font-size: 14px; font-weight: 600"
+                >Adaobi Fashion</span
+              >
+            </div>
+            <div style="position: relative">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 4h2l1.6 8.2a1.4 1.4 0 0 0 1.4 1.1h6.4a1.4 1.4 0 0 0 1.4-1.1L17 6.5H5.4"
+                  stroke="#0F2518"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle cx="8.4" cy="16.4" r="1.1" fill="#0F2518" />
+                <circle cx="14.4" cy="16.4" r="1.1" fill="#0F2518" />
+              </svg>
+              <span
+                class="pulse"
+                style="
+                  position: absolute;
+                  top: -5px;
+                  right: -6px;
+                  min-width: 15px;
+                  height: 15px;
+                  padding: 0 4px;
+                  border-radius: 999px;
+                  background: #7a2e8c;
+                  color: #ffffff;
+                  font-size: 10px;
+                  font-weight: 600;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+                >2</span
+              >
+            </div>
+          </div>
+          <div
+            style="
+              padding: 14px;
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 12px;
+            "
+          >
+            <div>
+              <div
+                style="
+                  aspect-ratio: 1;
+                  border-radius: 8px;
+                  background: linear-gradient(150deg, #e9e2d8 0%, #dcd3c6 100%);
+                  display: flex;
+                  align-items: flex-end;
+                  justify-content: center;
+                  overflow: hidden;
+                "
+              >
+                <svg
+                  width="78"
+                  height="94"
+                  viewBox="0 0 72 86"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M24 6h24l14 12-8 9-3-3v56H25V24l-3 3-8-9L24 6z"
+                    fill="#C9BEAC"
+                  />
+                </svg>
+              </div>
+              <div
+                style="
+                  font-size: 13px;
+                  font-weight: 500;
+                  margin-top: 7px;
+                  line-height: 1.3;
+                "
+              >
+                Ankara wrap dress
+              </div>
+              <div style="font-size: 13.5px; font-weight: 600; margin-top: 2px">
+                ₦24,500
+              </div>
+            </div>
+            <div>
+              <div
+                style="
+                  aspect-ratio: 1;
+                  border-radius: 8px;
+                  background: linear-gradient(150deg, #dee6e0 0%, #cdd9d1 100%);
+                  display: flex;
+                  align-items: flex-end;
+                  justify-content: center;
+                  overflow: hidden;
+                "
+              >
+                <svg
+                  width="86"
+                  height="76"
+                  viewBox="0 0 80 70"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M10 52c6-22 16-34 30-34s24 12 30 34c-8 6-20 9-30 9s-22-3-30-9z"
+                    fill="#B9C7BE"
+                  />
+                </svg>
+              </div>
+              <div
+                style="
+                  font-size: 13px;
+                  font-weight: 500;
+                  margin-top: 7px;
+                  line-height: 1.3;
+                "
+              >
+                Raffia tote bag
+              </div>
+              <div style="font-size: 13.5px; font-weight: 600; margin-top: 2px">
+                ₦18,000
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              padding: 0 14px 16px;
+              font-size: 13px;
+              color: #7c8083;
+              text-align: center;
+            "
+          >
+            A real store on the platform — adaobi.[brand].com
+          </div>
+        </div>
+
+        <!-- Pain -->
+        <div
+          style="background: #0f2518; color: #ffffff; padding: 44px 20px 48px"
+        >
+          <div
+            style="
+              font-size: 12px;
+              font-weight: 600;
+              letter-spacing: 0.09em;
+              text-transform: uppercase;
+              color: #6bca93;
+              margin-bottom: 14px;
+            "
+          >
+            The part nobody sells you a website for
+          </div>
+          <h2
+            style="
+              margin: 0 0 12px;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 30px;
+              line-height: 1.08;
+              font-weight: 700;
+              letter-spacing: -0.026em;
+            "
+          >
+            Right now, this is your Tuesday.
+          </h2>
+          <p
+            style="
+              margin: 0 0 26px;
+              font-size: 16.5px;
+              line-height: 1.55;
+              color: #a6dfbe;
+            "
+          >
+            You are not missing a website. You are doing five jobs by hand, in a
+            DM thread, every day.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div
+              style="
+                padding: 16px 18px;
+                border-radius: 10px;
+                background: #1a3828;
+              "
+            >
+              <div
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  line-height: 1.4;
+                  margin-bottom: 4px;
+                "
+              >
+                Squinting at a payment screenshot
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.5; color: #a6dfbe">
+                Checking the date, the amount, whether it is even real.
+              </div>
+            </div>
+            <div
+              style="
+                padding: 16px 18px;
+                border-radius: 10px;
+                background: #1a3828;
+              "
+            >
+              <div
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  line-height: 1.4;
+                  margin-bottom: 4px;
+                "
+              >
+                Orders buried under 300 unread DMs
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.5; color: #a6dfbe">
+                The order, the small talk and the haggling in one thread.
+              </div>
+            </div>
+            <div
+              style="
+                padding: 16px 18px;
+                border-radius: 10px;
+                background: #1a3828;
+              "
+            >
+              <div
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  line-height: 1.4;
+                  margin-bottom: 4px;
+                "
+              >
+                Delivery to Ikorodu, worked out by hand
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.5; color: #a6dfbe">
+                Every customer, every time, and you guess low half of them.
+              </div>
+            </div>
+            <div
+              style="
+                padding: 16px 18px;
+                border-radius: 10px;
+                background: #1a3828;
+              "
+            >
+              <div
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  line-height: 1.4;
+                  margin-bottom: 4px;
+                "
+              >
+                Walking to the shelf to check the blue one
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.5; color: #a6dfbe">
+                And selling it twice when you get it wrong.
+              </div>
+            </div>
+            <div
+              style="
+                padding: 16px 18px;
+                border-radius: 10px;
+                background: #1a3828;
+                border: 1px solid #27603f;
+              "
+            >
+              <div
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  line-height: 1.4;
+                  margin-bottom: 4px;
+                "
+              >
+                Sending your account number to a stranger
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.5; color: #a6dfbe">
+                They are wondering the same thing about you, and the sale
+                quietly dies.
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              margin-top: 28px;
+              padding-top: 22px;
+              border-top: 1px solid #27603f;
+              font-size: 18px;
+              line-height: 1.5;
+            "
+          >
+            None of that is a design problem. It is an admin problem — and a
+            checkout is the only thing that removes it.
+          </div>
+        </div>
+
+        <!-- Money flow, vertical -->
+        <div style="padding: 44px 20px 48px">
+          <div
+            style="
+              font-size: 12px;
+              font-weight: 600;
+              letter-spacing: 0.09em;
+              text-transform: uppercase;
+              color: #337f53;
+              margin-bottom: 14px;
+            "
+          >
+            The question everyone asks first
+          </div>
+          <h2
+            style="
+              margin: 0 0 12px;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 30px;
+              line-height: 1.08;
+              font-weight: 700;
+              letter-spacing: -0.026em;
+            "
+          >
+            Your money never passes through us.
+          </h2>
+          <p
+            style="
+              margin: 0 0 26px;
+              font-size: 16.5px;
+              line-height: 1.6;
+              color: #585b5d;
+            "
+          >
+            There is no balance to withdraw and no account of ours in the
+            middle. Paystack splits each payment at settlement and sends it to
+            the bank account in your name.
+          </p>
+
+          <div
+            style="
+              padding: 24px 20px;
+              border-radius: 10px;
+              background: #ffffff;
+              border: 1px solid #e4e2db;
+            "
+          >
+            <svg
+              width="310"
+              height="380"
+              viewBox="0 0 310 380"
+              fill="none"
+              style="display: block; margin: 0 auto; max-width: 100%"
+              role="img"
+              aria-label="Customer pays, Paystack splits at settlement, money lands in the seller bank account. The platform receives order data only."
+            >
+              <rect
+                x="1"
+                y="1"
+                width="308"
+                height="88"
+                rx="10"
+                fill="#F8F7F4"
+                stroke="#D6D8D9"
+                stroke-width="1.4"
+              />
+              <text
+                x="22"
+                y="34"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="16"
+                font-weight="600"
+                fill="#0F2518"
+              >
+                Your customer
+              </text>
+              <text
+                x="22"
+                y="56"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="14"
+                fill="#7C8083"
+              >
+                Card or bank transfer
+              </text>
+              <text
+                x="22"
+                y="79"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="19"
+                font-weight="600"
+                fill="#0F2518"
+              >
+                ₦24,500
+              </text>
+
+              <path
+                class="flow"
+                d="M155 95v34"
+                stroke="#4DBF7D"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M149 123l6 7 6-7"
+                stroke="#4DBF7D"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+
+              <rect
+                x="1"
+                y="138"
+                width="308"
+                height="88"
+                rx="10"
+                fill="#0F2518"
+              />
+              <text
+                x="22"
+                y="171"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="16"
+                font-weight="600"
+                fill="#FFFFFF"
+              >
+                Paystack
+              </text>
+              <text
+                x="22"
+                y="193"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="14"
+                fill="#A6DFBE"
+              >
+                Splits at settlement
+              </text>
+              <text
+                x="22"
+                y="214"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="13.5"
+                fill="#6BCA93"
+              >
+                Licensed. Regulated. Not us.
+              </text>
+
+              <path
+                class="flow"
+                d="M155 232v34"
+                stroke="#4DBF7D"
+                stroke-width="2"
+                stroke-linecap="round"
+                style="animation-delay: 0.28s"
+              />
+              <path
+                d="M149 260l6 7 6-7"
+                stroke="#4DBF7D"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+
+              <rect
+                x="1"
+                y="275"
+                width="308"
+                height="88"
+                rx="10"
+                fill="#DBF2E5"
+                stroke="#4DBF7D"
+                stroke-width="1.6"
+              />
+              <text
+                x="22"
+                y="308"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="16"
+                font-weight="600"
+                fill="#0F2518"
+              >
+                Your bank account
+              </text>
+              <text
+                x="22"
+                y="330"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="14"
+                fill="#337F53"
+              >
+                In your business name
+              </text>
+              <text
+                x="22"
+                y="353"
+                font-family="Schibsted Grotesk, sans-serif"
+                font-size="19"
+                font-weight="600"
+                fill="#0F2518"
+              >
+                ₦24,500
+              </text>
+            </svg>
+            <div
+              style="
+                margin-top: 18px;
+                padding: 14px 16px;
+                border-radius: 8px;
+                background: #f9fafb;
+                border: 1px dashed #c3c5c6;
+              "
+            >
+              <div
+                style="
+                  font-size: 15px;
+                  font-weight: 600;
+                  color: #0f2518;
+                  margin-bottom: 3px;
+                "
+              >
+                Us
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.5; color: #7c8083">
+                We are told an order was paid. That is all we ever receive.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What you operate -->
+        <div style="padding: 0 20px 44px">
+          <h2
+            style="
+              margin: 0 0 10px;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 30px;
+              line-height: 1.08;
+              font-weight: 700;
+              letter-spacing: -0.026em;
+            "
+          >
+            One screen instead of a thread.
+          </h2>
+          <p
+            style="
+              margin: 0 0 22px;
+              font-size: 16.5px;
+              line-height: 1.55;
+              color: #585b5d;
+            "
+          >
+            Every paid order in one list, with a number your customer can quote
+            back to you.
+          </p>
+          <div
+            style="
+              border-radius: 10px;
+              border: 1px solid #e4e2db;
+              background: #ffffff;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 54px 1fr 84px;
+                padding: 10px 14px;
+                background: #f9fafb;
+                border-bottom: 1px solid #efede8;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #7c8083;
+              "
+            >
+              <span>Order</span><span>Customer</span
+              ><span style="text-align: right">Status</span>
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 54px 1fr 84px;
+                padding: 13px 14px;
+                border-bottom: 1px solid #f2f2f3;
+                font-size: 14px;
+                align-items: center;
+              "
+            >
+              <span style="font-weight: 600">#1042</span
+              ><span style="color: #585b5d">Ngozi Eze</span>
+              <span style="text-align: right"
+                ><span
+                  style="
+                    display: inline-block;
+                    padding: 3px 9px;
+                    border-radius: 999px;
+                    background: #e7f6ec;
+                    color: #04802e;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                  "
+                  >Paid</span
+                ></span
+              >
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 54px 1fr 84px;
+                padding: 13px 14px;
+                border-bottom: 1px solid #f2f2f3;
+                font-size: 14px;
+                align-items: center;
+              "
+            >
+              <span style="font-weight: 600">#1041</span
+              ><span style="color: #585b5d">Tunde Bakare</span>
+              <span style="text-align: right"
+                ><span
+                  style="
+                    display: inline-block;
+                    padding: 3px 9px;
+                    border-radius: 999px;
+                    background: #e8f1fb;
+                    color: #006ce0;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                  "
+                  >Shipped</span
+                ></span
+              >
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 54px 1fr 84px;
+                padding: 13px 14px;
+                font-size: 14px;
+                align-items: center;
+              "
+            >
+              <span style="font-weight: 600">#1040</span
+              ><span style="color: #585b5d">Amaka Obi</span>
+              <span style="text-align: right"
+                ><span
+                  style="
+                    display: inline-block;
+                    padding: 3px 9px;
+                    border-radius: 999px;
+                    background: #fef6e7;
+                    color: #ad6f07;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                  "
+                  >Pending</span
+                ></span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ, three that matter most on mobile -->
+        <div style="padding: 0 20px 44px">
+          <h2
+            style="
+              margin: 0 0 20px;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 30px;
+              line-height: 1.08;
+              font-weight: 700;
+              letter-spacing: -0.026em;
+            "
+          >
+            Asked before anyone pays
+          </h2>
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div
+              style="
+                padding: 18px 20px;
+                border-radius: 10px;
+                background: #ffffff;
+                border: 1px solid #e4e2db;
+              "
+            >
+              <h3
+                style="
+                  margin: 0 0 8px;
+                  font-size: 17px;
+                  font-weight: 600;
+                  line-height: 1.35;
+                "
+              >
+                How much does an online store cost in Nigeria?
+              </h3>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 15.5px;
+                  line-height: 1.6;
+                  color: #585b5d;
+                "
+              >
+                A brochure site with no cart is around ₦25,000. An agency build
+                starts at ₦150,000. Ours sits between and actually takes payment
+                — see <a href="#">pricing</a>.
+              </p>
+            </div>
+            <div
+              style="
+                padding: 18px 20px;
+                border-radius: 10px;
+                background: #ffffff;
+                border: 1px solid #e4e2db;
+              "
+            >
+              <h3
+                style="
+                  margin: 0 0 8px;
+                  font-size: 17px;
+                  font-weight: 600;
+                  line-height: 1.35;
+                "
+              >
+                Do I need my own Paystack account?
+              </h3>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 15.5px;
+                  line-height: 1.6;
+                  color: #585b5d;
+                "
+              >
+                You need a Nigerian business bank account. We open the Paystack
+                subaccount against it, in your name, during setup.
+              </p>
+            </div>
+            <div
+              style="
+                padding: 18px 20px;
+                border-radius: 10px;
+                background: #ffffff;
+                border: 1px solid #e4e2db;
+              "
+            >
+              <h3
+                style="
+                  margin: 0 0 8px;
+                  font-size: 17px;
+                  font-weight: 600;
+                  line-height: 1.35;
+                "
+              >
+                Can I keep selling on Instagram?
+              </h3>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 15.5px;
+                  line-height: 1.6;
+                  color: #585b5d;
+                "
+              >
+                Yes, and most sellers do. The store becomes the link in your
+                bio; the paying and the delivery fee stop happening in your DMs.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div
+          style="
+            padding: 40px 20px 44px;
+            background: #ffffff;
+            border-top: 1px solid #e4e2db;
+            text-align: center;
+          "
+        >
+          <h2
+            style="
+              margin: 0 0 12px;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 30px;
+              line-height: 1.08;
+              font-weight: 700;
+              letter-spacing: -0.028em;
+            "
+          >
+            Send your product list. Sell this week.
+          </h2>
+          <p
+            style="
+              margin: 0 0 24px;
+              font-size: 16.5px;
+              line-height: 1.55;
+              color: #585b5d;
+            "
+          >
+            Your photos, prices, delivery areas and bank details. We do the
+            rest.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 52px;
+                border-radius: 4px;
+                background: #4dbf7d;
+                border: 1px solid #4dbf7d;
+                color: #ffffff;
+                font-size: 17px;
+                font-weight: 500;
+              "
+              >Get your store</a
+            >
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 52px;
+                border-radius: 4px;
+                background: #ffffff;
+                border: 1px solid #d6d8d9;
+                color: #0f2518;
+                font-size: 17px;
+                font-weight: 500;
+              "
+              >Message us on WhatsApp</a
+            >
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div
+          style="background: #0f2518; color: #a6dfbe; padding: 32px 20px 28px"
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-bottom: 12px;
+            "
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="1.5"
+                y="6.5"
+                width="21"
+                height="15"
+                rx="2.5"
+                stroke="#FFFFFF"
+                stroke-width="1.7"
+              />
+              <path d="M1.5 11.5h21" stroke="#FFFFFF" stroke-width="1.7" />
+              <circle cx="17.5" cy="16.5" r="1.6" fill="#4DBF7D" />
+            </svg>
+            <span
+              style="
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 16px;
+                font-weight: 700;
+                color: #ffffff;
+              "
+              >{{brandName}}</span
+            >
+          </div>
+          <div style="font-size: 14.5px; line-height: 1.6; margin-bottom: 16px">
+            Online stores for Nigerian businesses.
+          </div>
+          <div style="font-size: 14.5px; color: #6bca93; margin-bottom: 20px">
+            [YOUR LAGOS ADDRESS]
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 16px;
+              font-size: 14.5px;
+              padding-top: 18px;
+              border-top: 1px solid #1e4330;
+            "
+          >
+            <a href="#" style="color: #a6dfbe">Pricing</a>
+            <a href="#" style="color: #a6dfbe">Demo store</a>
+            <a href="#" style="color: #a6dfbe">Sign in</a>
+            <a href="#" style="color: #a6dfbe">WhatsApp</a>
+          </div>
+          <div style="font-size: 13.5px; color: #6bca93; margin-top: 18px">
+            Payments processed by Paystack. © 2026 {{brandName}}.
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      data-dc-script
+      data-props='{"brandName":{"editor":"text","default":"[BRAND]","section":"Content"}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return { brandName: this.props.brandName ?? '[BRAND]' };
+        }
+      }
+    </script>
+  </body>
+</html>

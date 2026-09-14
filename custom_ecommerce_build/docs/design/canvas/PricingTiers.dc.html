@@ -1,0 +1,1107 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600&display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f8f7f4;
+            font-family:
+              'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #337f53;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #0f2518;
+          }
+          * {
+            box-sizing: border-box;
+          }
+
+          @media (prefers-reduced-motion: no-preference) {
+            @keyframes dcRise {
+              from {
+                opacity: 0;
+                transform: translateY(16px);
+              }
+              to {
+                opacity: 1;
+                transform: none;
+              }
+            }
+            @keyframes dcPulse {
+              0%,
+              100% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.16);
+              }
+            }
+            .rise {
+              animation: dcRise 0.68s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            }
+            .pulse {
+              animation: dcPulse 2.6s ease-in-out infinite;
+              transform-origin: center;
+            }
+            .btn:hover {
+              transform: translateY(-1px);
+              filter: brightness(1.06);
+            }
+            .btn:active {
+              transform: translateY(0);
+              filter: brightness(0.98);
+            }
+            .lift:hover {
+              transform: translateY(-4px);
+              box-shadow: 0 24px 40px -22px rgba(15, 37, 24, 0.34);
+            }
+          }
+          .btn {
+            transition:
+              transform 0.16s ease,
+              filter 0.16s ease;
+          }
+          .lift {
+            transition:
+              transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1),
+              box-shadow 0.22s ease;
+          }
+        </style>
+      </helmet>
+
+      <div style="width: 1440px; background: #f8f7f4; color: #0f2518">
+        <!-- Nav -->
+        <div
+          style="
+            height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 100px;
+            border-bottom: 1px solid #e4e2db;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 9px">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="1.5"
+                y="6.5"
+                width="21"
+                height="15"
+                rx="2.5"
+                stroke="#0F2518"
+                stroke-width="1.6"
+              />
+              <path d="M1.5 11.5h21" stroke="#0F2518" stroke-width="1.6" />
+              <circle cx="17.5" cy="16.5" r="1.6" fill="#4DBF7D" />
+            </svg>
+            <span
+              style="
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 19px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+              "
+              >{{brandName}}</span
+            >
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px">
+            <a
+              href="#"
+              style="font-size: 15px; font-weight: 500; color: #0f2518"
+              >Sign in</a
+            >
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: inline-flex;
+                align-items: center;
+                height: 44px;
+                padding: 0 20px;
+                border-radius: 4px;
+                background: #4dbf7d;
+                border: 1px solid #4dbf7d;
+                color: #ffffff;
+                font-size: 15px;
+                font-weight: 500;
+              "
+              >Get your store</a
+            >
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div style="padding: 76px 100px 0; text-align: center">
+          <h1
+            class="rise"
+            style="
+              margin: 0 auto 16px;
+              font-family:
+                'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+              font-size: 56px;
+              line-height: 1.04;
+              font-weight: 700;
+              letter-spacing: -0.03em;
+              max-width: 820px;
+              text-wrap: pretty;
+            "
+          >
+            Start free. Pay us when it is working.
+          </h1>
+          <p
+            class="rise"
+            style="
+              animation-delay: 0.07s;
+              margin: 0 auto 34px;
+              font-size: 20px;
+              line-height: 1.55;
+              color: #585b5d;
+              max-width: 660px;
+            "
+          >
+            Open a shop today for nothing and we take a small share of what you
+            actually sell. When that share starts costing more than a flat fee,
+            move to a plan and we take nothing at all.
+          </p>
+
+          <div
+            class="rise"
+            style="
+              animation-delay: 0.12s;
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              padding: 4px;
+              border-radius: 999px;
+              background: #ffffff;
+              border: 1px solid #e4e2db;
+              margin-bottom: 12px;
+            "
+          >
+            <span
+              style="display: inline-flex; align-items: center; height: 38px; padding: 0 20px; border-radius: 999px; font-size: 15px; font-weight: 500; background: {{monthlyChipBg}}; color: {{monthlyChipFg}};"
+              >Monthly</span
+            >
+            <span
+              style="display: inline-flex; align-items: center; height: 38px; padding: 0 20px; border-radius: 999px; font-size: 15px; font-weight: 500; background: {{annualChipBg}}; color: {{annualChipFg}};"
+              >Yearly · 2 months free</span
+            >
+          </div>
+        </div>
+
+        <!-- Tiers -->
+        <div style="padding: 34px 100px 0">
+          <div
+            style="
+              max-width: 1240px;
+              margin: 0 auto;
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 24px;
+              align-items: stretch;
+            "
+          >
+            <!-- Starter -->
+            <div
+              class="lift"
+              style="
+                display: flex;
+                flex-direction: column;
+                padding: 36px 34px 34px;
+                border-radius: 10px;
+                background: #ffffff;
+                border: 1px solid #e4e2db;
+              "
+            >
+              <div
+                style="
+                  font-size: 19px;
+                  font-weight: 600;
+                  color: #0f2518;
+                  margin-bottom: 6px;
+                "
+              >
+                Starter
+              </div>
+              <div
+                style="
+                  font-size: 15.5px;
+                  line-height: 1.5;
+                  color: #7c8083;
+                  margin-bottom: 26px;
+                  min-height: 44px;
+                "
+              >
+                For a seller who wants to see it work before paying anything.
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: baseline;
+                  gap: 8px;
+                  margin-bottom: 8px;
+                "
+              >
+                <span
+                  style="
+                    font-family:
+                      'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                    font-size: 52px;
+                    line-height: 1;
+                    font-weight: 700;
+                    letter-spacing: -0.04em;
+                  "
+                  >₦0</span
+                >
+                <span style="font-size: 17px; color: #7c8083">to start</span>
+              </div>
+              <div
+                style="
+                  font-size: 16px;
+                  color: #337f53;
+                  font-weight: 500;
+                  margin-bottom: 28px;
+                "
+              >
+                then {{starterPercent}} of each sale
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 12px;
+                  font-size: 15.5px;
+                  line-height: 1.5;
+                  color: #3f4a44;
+                "
+              >
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Up to 15 products
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Full checkout, delivery zones, coupons
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Free address at yourshop.[brand].com
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >You set it up yourself
+                </div>
+              </div>
+              <div style="flex-grow: 1; min-height: 28px"></div>
+              <a
+                href="#"
+                class="btn"
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  height: 50px;
+                  border-radius: 4px;
+                  background: #ffffff;
+                  border: 1px solid #d6d8d9;
+                  color: #0f2518;
+                  font-size: 16px;
+                  font-weight: 500;
+                "
+                >Open a free shop</a
+              >
+            </div>
+
+            <!-- Shop — recommended -->
+            <div
+              class="lift"
+              style="
+                display: flex;
+                flex-direction: column;
+                padding: 36px 34px 34px;
+                border-radius: 10px;
+                background: #0f2518;
+                color: #ffffff;
+                border: 1px solid #0f2518;
+                position: relative;
+              "
+            >
+              <div
+                style="
+                  position: absolute;
+                  top: -13px;
+                  left: 34px;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 7px;
+                  height: 26px;
+                  padding: 0 12px;
+                  border-radius: 999px;
+                  background: #4dbf7d;
+                  color: #06301b;
+                  font-size: 12.5px;
+                  font-weight: 600;
+                  letter-spacing: 0.02em;
+                "
+              >
+                <span
+                  class="pulse"
+                  style="
+                    width: 5px;
+                    height: 5px;
+                    border-radius: 999px;
+                    background: #06301b;
+                    display: inline-block;
+                  "
+                ></span>
+                Most sellers choose this
+              </div>
+              <div
+                style="font-size: 19px; font-weight: 600; margin-bottom: 6px"
+              >
+                Shop
+              </div>
+              <div
+                style="
+                  font-size: 15.5px;
+                  line-height: 1.5;
+                  color: #a6dfbe;
+                  margin-bottom: 26px;
+                  min-height: 44px;
+                "
+              >
+                For a business already taking orders every week.
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: baseline;
+                  gap: 8px;
+                  margin-bottom: 8px;
+                "
+              >
+                <span
+                  style="
+                    font-family:
+                      'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                    font-size: 52px;
+                    line-height: 1;
+                    font-weight: 700;
+                    letter-spacing: -0.04em;
+                  "
+                  >{{shopPrice}}</span
+                >
+                <span style="font-size: 17px; color: #a6dfbe">{{per}}</span>
+              </div>
+              <div
+                style="
+                  font-size: 16px;
+                  color: #6bca93;
+                  font-weight: 500;
+                  margin-bottom: 28px;
+                "
+              >
+                {{setupPrice}} once to set it up for you
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 12px;
+                  font-size: 15.5px;
+                  line-height: 1.5;
+                  color: #dbf2e5;
+                "
+              >
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#4DBF7D"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><strong style="font-weight: 600; color: #ffffff"
+                    >0% of your sales — we take nothing</strong
+                  >
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#4DBF7D"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Up to 200 products
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#4DBF7D"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Your own domain, connected for you
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#4DBF7D"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Three staff logins
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#4DBF7D"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Catalogue loaded from your spreadsheet
+                </div>
+              </div>
+              <div style="flex-grow: 1; min-height: 28px"></div>
+              <a
+                href="#"
+                class="btn"
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  height: 50px;
+                  border-radius: 4px;
+                  background: #4dbf7d;
+                  border: 1px solid #4dbf7d;
+                  color: #ffffff;
+                  font-size: 16px;
+                  font-weight: 500;
+                "
+                >Start your store</a
+              >
+            </div>
+
+            <!-- Plus -->
+            <div
+              class="lift"
+              style="
+                display: flex;
+                flex-direction: column;
+                padding: 36px 34px 34px;
+                border-radius: 10px;
+                background: #ffffff;
+                border: 1px solid #e4e2db;
+              "
+            >
+              <div
+                style="
+                  font-size: 19px;
+                  font-weight: 600;
+                  color: #0f2518;
+                  margin-bottom: 6px;
+                "
+              >
+                Shop Plus
+              </div>
+              <div
+                style="
+                  font-size: 15.5px;
+                  line-height: 1.5;
+                  color: #7c8083;
+                  margin-bottom: 26px;
+                  min-height: 44px;
+                "
+              >
+                For a shop with staff, couriers and a real catalogue.
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: baseline;
+                  gap: 8px;
+                  margin-bottom: 8px;
+                "
+              >
+                <span
+                  style="
+                    font-family:
+                      'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                    font-size: 52px;
+                    line-height: 1;
+                    font-weight: 700;
+                    letter-spacing: -0.04em;
+                  "
+                  >{{plusPrice}}</span
+                >
+                <span style="font-size: 17px; color: #7c8083">{{per}}</span>
+              </div>
+              <div
+                style="
+                  font-size: 16px;
+                  color: #337f53;
+                  font-weight: 500;
+                  margin-bottom: 28px;
+                "
+              >
+                {{setupPrice}} once to set it up for you
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 12px;
+                  font-size: 15.5px;
+                  line-height: 1.5;
+                  color: #3f4a44;
+                "
+              >
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Everything in Shop, plus:
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Unlimited products and staff
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Live courier quotes at checkout
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Search and Google Business setup
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    style="margin-top: 2px; flex-shrink: 0"
+                    aria-hidden="true"
+                  >
+                    <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                    <path
+                      d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                      stroke="#337F53"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >Same-day replies on WhatsApp
+                </div>
+              </div>
+              <div style="flex-grow: 1; min-height: 28px"></div>
+              <a
+                href="#"
+                class="btn"
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  height: 50px;
+                  border-radius: 4px;
+                  background: #ffffff;
+                  border: 1px solid #d6d8d9;
+                  color: #0f2518;
+                  font-size: 16px;
+                  font-weight: 500;
+                "
+                >Talk to us first</a
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Everything includes -->
+        <div style="padding: 56px 100px 0">
+          <div
+            style="
+              max-width: 1240px;
+              margin: 0 auto;
+              padding: 32px 40px;
+              border-radius: 10px;
+              background: #ffffff;
+              border: 1px solid #e4e2db;
+            "
+          >
+            <div
+              style="
+                font-size: 13px;
+                font-weight: 600;
+                letter-spacing: 0.09em;
+                text-transform: uppercase;
+                color: #337f53;
+                margin-bottom: 20px;
+              "
+            >
+              On every plan, including the free one
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 18px 32px;
+                font-size: 16px;
+                line-height: 1.5;
+                color: #3f4a44;
+              "
+            >
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Money settles to your own bank
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Your own Paystack dashboard
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Card, transfer and USSD
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Free pickup option
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Stock that counts itself down
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Coupon codes
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Works on any phone
+              </div>
+              <div style="display: flex; gap: 10px">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  style="margin-top: 2px; flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                  <path
+                    d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                    stroke="#337F53"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >Your data leaves with you
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- The honest note -->
+        <div style="padding: 44px 100px 84px">
+          <div
+            style="
+              max-width: 1240px;
+              margin: 0 auto;
+              padding: 30px 36px;
+              border-radius: 10px;
+              background: #dbf2e5;
+              border: 1px solid #a6dfbe;
+              display: grid;
+              grid-template-columns: 1fr auto;
+              gap: 40px;
+              align-items: center;
+            "
+          >
+            <div>
+              <div
+                style="
+                  font-size: 19px;
+                  font-weight: 600;
+                  color: #0f2518;
+                  margin-bottom: 8px;
+                "
+              >
+                When does a plan beat the free one?
+              </div>
+              <div
+                style="
+                  font-size: 16.5px;
+                  line-height: 1.6;
+                  color: #337f53;
+                  max-width: 800px;
+                "
+              >
+                At {{starterPercent}}, the free plan costs you more than
+                {{shopPrice}} once you pass roughly {{crossover}} in sales a
+                month. Below that, stay free — we will tell you when you cross
+                it rather than waiting for you to notice.
+              </div>
+            </div>
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: inline-flex;
+                align-items: center;
+                height: 50px;
+                padding: 0 24px;
+                border-radius: 4px;
+                background: #0f2518;
+                border: 1px solid #0f2518;
+                color: #ffffff;
+                font-size: 16px;
+                font-weight: 500;
+                white-space: nowrap;
+              "
+              >Work it out with us</a
+            >
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div
+          style="
+            background: #0f2518;
+            color: #a6dfbe;
+            padding: 40px 100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14.5px;
+          "
+        >
+          <span>© 2026 {{brandName}}. All prices in Naira.</span>
+          <span>Payments processed by Paystack.</span>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      data-dc-script
+      data-props='{"brandName":{"editor":"text","default":"[BRAND]","section":"Content"},"interval":{"editor":"enum","options":["monthly","yearly"],"default":"monthly","section":"Pricing"},"starterPercent":{"editor":"text","default":"2.5%","section":"Pricing"},"shopMonthly":{"editor":"text","default":"₦12,000","section":"Pricing"},"shopYearly":{"editor":"text","default":"₦120,000","section":"Pricing"},"plusMonthly":{"editor":"text","default":"₦28,000","section":"Pricing"},"plusYearly":{"editor":"text","default":"₦280,000","section":"Pricing"},"setupPrice":{"editor":"text","default":"₦45,000","section":"Pricing"},"crossover":{"editor":"text","default":"₦480,000","section":"Pricing"}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          const yearly = (this.props.interval ?? 'monthly') === 'yearly';
+          const on = { bg: '#0F2518', fg: '#FFFFFF' };
+          const off = { bg: 'transparent', fg: '#585B5D' };
+          return {
+            brandName: this.props.brandName ?? '[BRAND]',
+            starterPercent: this.props.starterPercent ?? '2.5%',
+            setupPrice: this.props.setupPrice ?? '₦45,000',
+            crossover: this.props.crossover ?? '₦480,000',
+            shopPrice: yearly
+              ? (this.props.shopYearly ?? '₦120,000')
+              : (this.props.shopMonthly ?? '₦12,000'),
+            plusPrice: yearly
+              ? (this.props.plusYearly ?? '₦280,000')
+              : (this.props.plusMonthly ?? '₦28,000'),
+            per: yearly ? 'a year' : 'a month',
+            monthlyChipBg: yearly ? off.bg : on.bg,
+            monthlyChipFg: yearly ? off.fg : on.fg,
+            annualChipBg: yearly ? on.bg : off.bg,
+            annualChipFg: yearly ? on.fg : off.fg,
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

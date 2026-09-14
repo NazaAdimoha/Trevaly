@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Merchant",
+    "slug": "commerce-merchant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "naijashop-merchant",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourbrand.merchant"
+    },
+    "android": {
+      "package": "com.yourbrand.merchant",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Merchant needs your photo library to add product pictures.",
+          "cameraPermission": "Merchant needs your camera to photograph products."
+        }
+      ],
+      "expo-web-browser",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0F2518",
+          "dark": {
+            "backgroundColor": "#0F2518"
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "icon": "./assets/icon.png"
+  }
+}

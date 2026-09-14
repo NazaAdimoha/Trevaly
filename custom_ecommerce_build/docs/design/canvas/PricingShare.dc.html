@@ -1,0 +1,411 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600&display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #0f2518;
+            font-family:
+              'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #6bca93;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #ffffff;
+          }
+          * {
+            box-sizing: border-box;
+          }
+          @media (prefers-reduced-motion: no-preference) {
+            @keyframes dcPulse {
+              0%,
+              100% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.18);
+              }
+            }
+            .pulse {
+              animation: dcPulse 2.6s ease-in-out infinite;
+              transform-origin: center;
+            }
+            .btn:active {
+              transform: scale(0.985);
+            }
+          }
+          .btn {
+            transition: transform 0.14s ease;
+          }
+        </style>
+      </helmet>
+
+      <!--
+  The screenshot asset. This is the one screen designed to survive being
+  screenshotted on a phone and forwarded with no surrounding context, so it
+  carries the offer AND the domain inside the frame. Nothing scrolls.
+-->
+      <div
+        style="
+          width: 390px;
+          height: 844px;
+          background: #0f2518;
+          color: #ffffff;
+          padding: 30px 28px;
+          display: flex;
+          flex-direction: column;
+        "
+      >
+        <!-- Brand + domain, top -->
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 8px">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="1.5"
+                y="6.5"
+                width="21"
+                height="15"
+                rx="2.5"
+                stroke="#FFFFFF"
+                stroke-width="1.7"
+              />
+              <path d="M1.5 11.5h21" stroke="#FFFFFF" stroke-width="1.7" />
+              <circle cx="17.5" cy="16.5" r="1.6" fill="#4DBF7D" />
+            </svg>
+            <span
+              style="
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 17px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+              "
+              >{{brandName}}</span
+            >
+          </div>
+          <span style="font-size: 13.5px; color: #6bca93">{{domain}}</span>
+        </div>
+
+        <div style="height: 26px"></div>
+
+        <h1
+          style="
+            margin: 0;
+            font-family:
+              'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 31px;
+            line-height: 1.08;
+            font-weight: 700;
+            letter-spacing: -0.028em;
+            text-wrap: pretty;
+          "
+        >
+          A real online store.<br />Not a brochure.
+        </h1>
+
+        <div style="height: 24px"></div>
+
+        <!-- The number, with room to breathe -->
+        <div>
+          <div
+            style="
+              font-size: 12.5px;
+              font-weight: 600;
+              letter-spacing: 0.09em;
+              text-transform: uppercase;
+              color: #6bca93;
+              margin-bottom: 10px;
+            "
+          >
+            Everything below, once
+          </div>
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 10px;
+              flex-wrap: wrap;
+            "
+          >
+            <span
+              style="
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 62px;
+                line-height: 0.94;
+                font-weight: 700;
+                letter-spacing: -0.045em;
+              "
+              >{{buildPrice}}</span
+            >
+            <span style="font-size: 16px; color: #a6dfbe">one-time</span>
+          </div>
+          <div
+            style="
+              margin-top: 12px;
+              font-size: 15.5px;
+              line-height: 1.5;
+              color: #a6dfbe;
+            "
+          >
+            then {{hostingPrice}} a month to stay online
+          </div>
+        </div>
+
+        <div style="height: 22px"></div>
+        <div style="height: 1px; background: #1e4330"></div>
+        <div style="height: 22px"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 13px">
+          <div
+            style="
+              display: flex;
+              gap: 11px;
+              font-size: 15.5px;
+              line-height: 1.4;
+              color: #dbf2e5;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              style="margin-top: 2px; flex-shrink: 0"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+              <path
+                d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                stroke="#4DBF7D"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >30 products, loaded for you
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 11px;
+              font-size: 15.5px;
+              line-height: 1.4;
+              color: #dbf2e5;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              style="margin-top: 2px; flex-shrink: 0"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+              <path
+                d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                stroke="#4DBF7D"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >Card, transfer and USSD checkout
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 11px;
+              font-size: 15.5px;
+              line-height: 1.4;
+              color: #dbf2e5;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              style="margin-top: 2px; flex-shrink: 0"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+              <path
+                d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                stroke="#4DBF7D"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >Delivery fees by area, free pickup
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 11px;
+              font-size: 15.5px;
+              line-height: 1.4;
+              color: #dbf2e5;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              style="margin-top: 2px; flex-shrink: 0"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+              <path
+                d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                stroke="#4DBF7D"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >Coupon codes and stock counting
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 11px;
+              font-size: 15.5px;
+              line-height: 1.4;
+              color: #dbf2e5;
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              style="margin-top: 2px; flex-shrink: 0"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="8.2" fill="#1E4330" />
+              <path
+                d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                stroke="#4DBF7D"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >Your dashboard for orders and stock
+          </div>
+        </div>
+
+        <div style="height: 22px"></div>
+
+        <div
+          style="
+            padding: 16px 18px;
+            border-radius: 10px;
+            background: #1a3828;
+            border: 1px solid #27603f;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              font-size: 16px;
+              font-weight: 600;
+              color: #ffffff;
+              margin-bottom: 4px;
+            "
+          >
+            <span
+              class="pulse"
+              style="
+                width: 7px;
+                height: 7px;
+                border-radius: 999px;
+                background: #4dbf7d;
+                display: inline-block;
+                flex-shrink: 0;
+              "
+            ></span>
+            0% of your sales
+          </div>
+          <div style="font-size: 14.5px; line-height: 1.45; color: #a6dfbe">
+            Paystack settles straight to your own bank account. We never hold
+            your money.
+          </div>
+        </div>
+
+        <div style="flex-grow: 1; min-height: 18px"></div>
+
+        <a
+          href="#"
+          class="btn"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 52px;
+            border-radius: 4px;
+            background: #4dbf7d;
+            border: 1px solid #4dbf7d;
+            color: #ffffff;
+            font-size: 17px;
+            font-weight: 600;
+          "
+          >Get your store</a
+        >
+
+        <div
+          style="
+            margin-top: 16px;
+            text-align: center;
+            font-size: 15px;
+            color: #6bca93;
+          "
+        >
+          <span style="color: #ffffff; font-weight: 500">{{domain}}</span> ·
+          WhatsApp [YOUR NUMBER]
+        </div>
+      </div>
+    </x-dc>
+    <script
+      data-dc-script
+      data-props='{"$preview":{"width":390,"height":844},"brandName":{"editor":"text","default":"[BRAND]","section":"Content"},"domain":{"editor":"text","default":"[brand].com","section":"Content"},"buildPrice":{"editor":"text","default":"₦75,000","section":"Pricing"},"hostingPrice":{"editor":"text","default":"₦7,500","section":"Pricing"}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            brandName: this.props.brandName ?? '[BRAND]',
+            domain: this.props.domain ?? '[brand].com',
+            buildPrice: this.props.buildPrice ?? '₦75,000',
+            hostingPrice: this.props.hostingPrice ?? '₦7,500',
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

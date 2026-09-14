@@ -1,0 +1,11 @@
+-- Rename, not drop-and-add.
+--
+-- Prisma generated `DROP COLUMN "logoUrl"` + `ADD COLUMN "logoPublicId"`, which
+-- is lossless only because every row is currently null. This same file runs
+-- against production later, where that may not hold — a rename preserves
+-- whatever is there.
+--
+-- The column's MEANING changes with it: it now holds a Cloudinary public ID
+-- rather than a delivery URL. No row currently holds a URL, so there is nothing
+-- to convert; if that ever stops being true, this needs a data migration.
+ALTER TABLE "Tenant" RENAME COLUMN "logoUrl" TO "logoPublicId";

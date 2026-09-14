@@ -1,0 +1,1434 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600&display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f8f7f4;
+            font-family:
+              'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #337f53;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #0f2518;
+          }
+          * {
+            box-sizing: border-box;
+          }
+
+          @media (prefers-reduced-motion: no-preference) {
+            @keyframes dcRise {
+              from {
+                opacity: 0;
+                transform: translateY(16px);
+              }
+              to {
+                opacity: 1;
+                transform: none;
+              }
+            }
+            @keyframes dcNum {
+              from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.97);
+              }
+              to {
+                opacity: 1;
+                transform: none;
+              }
+            }
+            @keyframes dcPulse {
+              0%,
+              100% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.16);
+              }
+            }
+            .rise {
+              animation: dcRise 0.68s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            }
+            .num {
+              animation: dcNum 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            }
+            .pulse {
+              animation: dcPulse 2.6s ease-in-out infinite;
+              transform-origin: center;
+            }
+            .btn:hover {
+              transform: translateY(-1px);
+              filter: brightness(1.06);
+            }
+            .btn:active {
+              transform: translateY(0);
+              filter: brightness(0.98);
+            }
+            .ghost:hover {
+              transform: translateY(-1px);
+              box-shadow: inset 0 0 0 1.5px #4dbf7d;
+            }
+            .lift:hover {
+              transform: translateY(-3px);
+              box-shadow: 0 20px 34px -20px rgba(15, 37, 24, 0.32);
+            }
+          }
+          .btn,
+          .ghost {
+            transition:
+              transform 0.16s ease,
+              filter 0.16s ease,
+              box-shadow 0.16s ease;
+          }
+          .lift {
+            transition:
+              transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1),
+              box-shadow 0.22s ease;
+          }
+        </style>
+      </helmet>
+
+      <div style="width: 1440px; background: #f8f7f4; color: #0f2518">
+        <!-- Nav -->
+        <div
+          style="
+            height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 100px;
+            border-bottom: 1px solid #e4e2db;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 40px">
+            <div style="display: flex; align-items: center; gap: 9px">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="1.5"
+                  y="6.5"
+                  width="21"
+                  height="15"
+                  rx="2.5"
+                  stroke="#0F2518"
+                  stroke-width="1.6"
+                />
+                <path d="M1.5 11.5h21" stroke="#0F2518" stroke-width="1.6" />
+                <circle cx="17.5" cy="16.5" r="1.6" fill="#4DBF7D" />
+              </svg>
+              <span
+                style="
+                  font-family:
+                    'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                  font-size: 19px;
+                  font-weight: 700;
+                  letter-spacing: -0.02em;
+                "
+                >{{brandName}}</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 26px;
+                font-size: 15px;
+                color: #585b5d;
+              "
+            >
+              <a href="#">How it works</a>
+              <a href="#">What you get</a>
+              <a href="#" style="color: #0f2518; font-weight: 500">Pricing</a>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px">
+            <a
+              href="#"
+              style="font-size: 15px; font-weight: 500; color: #0f2518"
+              >Sign in</a
+            >
+            <a
+              href="#"
+              class="btn"
+              style="
+                display: inline-flex;
+                align-items: center;
+                height: 44px;
+                padding: 0 20px;
+                border-radius: 4px;
+                background: #4dbf7d;
+                border: 1px solid #4dbf7d;
+                color: #ffffff;
+                font-size: 15px;
+                font-weight: 500;
+              "
+              >Get your store</a
+            >
+          </div>
+        </div>
+
+        <!-- Headline + the number -->
+        <div style="padding: 80px 100px 0">
+          <div style="max-width: 1240px; margin: 0 auto">
+            <h1
+              class="rise"
+              style="
+                margin: 0 0 16px;
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 58px;
+                line-height: 1.04;
+                font-weight: 700;
+                letter-spacing: -0.03em;
+                max-width: 780px;
+                text-wrap: pretty;
+              "
+            >
+              One price for a shop that takes money.
+            </h1>
+            <p
+              class="rise"
+              style="
+                animation-delay: 0.07s;
+                margin: 0 0 52px;
+                font-size: 20px;
+                line-height: 1.55;
+                color: #585b5d;
+                max-width: 660px;
+              "
+            >
+              No commission on your sales. No percentage skimmed at settlement.
+              You pay us once to build it, and what your customers pay goes to
+              your bank.
+            </p>
+
+            <div
+              class="rise"
+              style="
+                animation-delay: 0.12s;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 28px;
+                align-items: stretch;
+              "
+            >
+              <!-- The price block. Deliberately loose: the figure can change length. -->
+              <div
+                style="
+                  border-radius: 10px;
+                  background: #0f2518;
+                  color: #ffffff;
+                  padding: 52px 48px 46px;
+                  display: flex;
+                  flex-direction: column;
+                "
+              >
+                <div
+                  style="
+                    font-size: 13px;
+                    font-weight: 600;
+                    letter-spacing: 0.09em;
+                    text-transform: uppercase;
+                    color: #6bca93;
+                    margin-bottom: 28px;
+                  "
+                >
+                  Everything below, once
+                </div>
+                <div
+                  class="num"
+                  style="
+                    animation-delay: 0.2s;
+                    display: flex;
+                    align-items: baseline;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <span
+                    style="
+                      font-family:
+                        'Bricolage Grotesque', 'Helvetica Neue', Arial,
+                        sans-serif;
+                      font-size: 92px;
+                      line-height: 0.94;
+                      font-weight: 700;
+                      letter-spacing: -0.045em;
+                      color: #ffffff;
+                    "
+                    >{{buildPrice}}</span
+                  >
+                  <span
+                    style="font-size: 19px; color: #a6dfbe; font-weight: 500"
+                    >one-time</span
+                  >
+                </div>
+                <div
+                  style="
+                    margin-top: 24px;
+                    font-size: 17px;
+                    line-height: 1.6;
+                    color: #a6dfbe;
+                    max-width: 420px;
+                  "
+                >
+                  Then {{hostingPrice}} a month to keep it online, updated and
+                  backed up. Cancel any month; your data stays yours.
+                </div>
+                <div style="flex-grow: 1"></div>
+                <div
+                  style="
+                    margin-top: 40px;
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                  "
+                >
+                  <a
+                    href="#"
+                    class="btn"
+                    style="
+                      display: inline-flex;
+                      align-items: center;
+                      height: 52px;
+                      padding: 0 26px;
+                      border-radius: 4px;
+                      background: #4dbf7d;
+                      border: 1px solid #4dbf7d;
+                      color: #ffffff;
+                      font-size: 17px;
+                      font-weight: 500;
+                    "
+                    >Start your store</a
+                  >
+                  <a
+                    href="#"
+                    style="font-size: 16px; font-weight: 500; color: #6bca93"
+                    >Talk on WhatsApp</a
+                  >
+                </div>
+                <div
+                  style="
+                    margin-top: 26px;
+                    padding-top: 22px;
+                    border-top: 1px solid #1e4330;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 15px;
+                    color: #6bca93;
+                  "
+                >
+                  <span
+                    class="pulse"
+                    style="
+                      width: 7px;
+                      height: 7px;
+                      border-radius: 999px;
+                      background: #4dbf7d;
+                      display: inline-block;
+                      flex-shrink: 0;
+                    "
+                  ></span>
+                  0% of your sales. We take nothing at settlement.
+                </div>
+              </div>
+
+              <!-- Inclusions -->
+              <div
+                style="
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                  padding: 44px 44px 40px;
+                "
+              >
+                <div
+                  style="
+                    font-size: 13px;
+                    font-weight: 600;
+                    letter-spacing: 0.09em;
+                    text-transform: uppercase;
+                    color: #337f53;
+                    margin-bottom: 24px;
+                  "
+                >
+                  What is in it
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span
+                      >Up to
+                      <strong style="color: #0f2518; font-weight: 600"
+                        >30 products</strong
+                      >, loaded for you from your list or spreadsheet</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span
+                      >Cart and checkout — card, bank transfer, USSD via
+                      Paystack</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span
+                      >Delivery pricing in three areas, plus free in-store
+                      pickup</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span>Two launch coupon codes set up with you</span>
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span
+                      >Your dashboard — orders, stock, products, staff
+                      logins</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span
+                      >A free address at
+                      <strong style="color: #0f2518; font-weight: 600"
+                        >yourshop.[brand].com</strong
+                      ></span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span>One round of changes before we hand it over</span>
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 12px;
+                      font-size: 16.5px;
+                      line-height: 1.5;
+                      color: #3f4a44;
+                    "
+                  >
+                    <svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      style="margin-top: 3px; flex-shrink: 0"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="9" r="8.2" fill="#DBF2E5" />
+                      <path
+                        d="M5.6 9.2l2.2 2.2 4.6-4.8"
+                        stroke="#337F53"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                    ><span>Seven days of fixes after launch, no charge</span>
+                  </div>
+                </div>
+                <div
+                  style="
+                    margin-top: 26px;
+                    padding: 16px 18px;
+                    border-radius: 8px;
+                    background: #f9fafb;
+                    font-size: 15px;
+                    line-height: 1.55;
+                    color: #7c8083;
+                  "
+                >
+                  Paystack charges its own fee on each sale — 1.5% plus ₦100,
+                  waived under ₦2,500 — deducted from that sale, not billed to
+                  you. That fee is theirs, not ours.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- The anchor: what ₦25k buys vs this vs an agency -->
+        <div style="padding: 92px 100px 0">
+          <div style="max-width: 1240px; margin: 0 auto">
+            <h2
+              style="
+                margin: 0 0 12px;
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 42px;
+                line-height: 1.08;
+                font-weight: 700;
+                letter-spacing: -0.026em;
+              "
+            >
+              What the cheaper option actually gets you
+            </h2>
+            <p
+              style="
+                margin: 0 0 36px;
+                font-size: 19px;
+                line-height: 1.55;
+                color: #585b5d;
+                max-width: 700px;
+              "
+            >
+              Worth being blunt about, because the ₦25,000 quote in your DMs is
+              real and it is not the same product.
+            </p>
+
+            <div
+              style="
+                border-radius: 10px;
+                overflow: hidden;
+                border: 1px solid #e4e2db;
+                background: #ffffff;
+              "
+            >
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+                  background: #f9fafb;
+                  border-bottom: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    padding: 18px 26px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    letter-spacing: 0.07em;
+                    text-transform: uppercase;
+                    color: #7c8083;
+                  "
+                ></div>
+                <div
+                  style="
+                    padding: 18px 20px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #585b5d;
+                  "
+                >
+                  Brochure site
+                  <div
+                    style="
+                      font-size: 13.5px;
+                      font-weight: 400;
+                      color: #96999c;
+                      margin-top: 2px;
+                    "
+                  >
+                    around ₦25,000
+                  </div>
+                </div>
+                <div
+                  style="
+                    padding: 18px 20px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    background: #dbf2e5;
+                  "
+                >
+                  This
+                  <div
+                    style="
+                      font-size: 13.5px;
+                      font-weight: 400;
+                      color: #337f53;
+                      margin-top: 2px;
+                    "
+                  >
+                    {{buildPrice}}
+                  </div>
+                </div>
+                <div
+                  style="
+                    padding: 18px 20px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #585b5d;
+                  "
+                >
+                  Agency build
+                  <div
+                    style="
+                      font-size: 13.5px;
+                      font-weight: 400;
+                      color: #96999c;
+                      margin-top: 2px;
+                    "
+                  >
+                    ₦150,000 and up
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+                  border-bottom: 1px solid #f2f2f3;
+                  align-items: center;
+                "
+              >
+                <div
+                  style="padding: 16px 26px; font-size: 16px; color: #0f2518"
+                >
+                  Customers can pay on the site
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="No"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#FBEAE9" />
+                    <path
+                      d="M7 7l6 6M13 7l-6 6"
+                      stroke="#D42620"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px; background: #f3fbf6">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+                  border-bottom: 1px solid #f2f2f3;
+                  align-items: center;
+                "
+              >
+                <div
+                  style="padding: 16px 26px; font-size: 16px; color: #0f2518"
+                >
+                  Stock counts down when something sells
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="No"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#FBEAE9" />
+                    <path
+                      d="M7 7l6 6M13 7l-6 6"
+                      stroke="#D42620"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px; background: #f3fbf6">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+                  border-bottom: 1px solid #f2f2f3;
+                  align-items: center;
+                "
+              >
+                <div
+                  style="padding: 16px 26px; font-size: 16px; color: #0f2518"
+                >
+                  Delivery fee worked out at checkout
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="No"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#FBEAE9" />
+                    <path
+                      d="M7 7l6 6M13 7l-6 6"
+                      stroke="#D42620"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px; background: #f3fbf6">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+                  border-bottom: 1px solid #f2f2f3;
+                  align-items: center;
+                "
+              >
+                <div
+                  style="padding: 16px 26px; font-size: 16px; color: #0f2518"
+                >
+                  Payment checked on our server, not in the browser
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="No"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#FBEAE9" />
+                    <path
+                      d="M7 7l6 6M13 7l-6 6"
+                      stroke="#D42620"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px; background: #f3fbf6">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div
+                  style="padding: 16px 20px; font-size: 14.5px; color: #96999c"
+                >
+                  Depends who built it
+                </div>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+                  align-items: center;
+                "
+              >
+                <div
+                  style="padding: 16px 26px; font-size: 16px; color: #0f2518"
+                >
+                  Live in days, not months
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px; background: #f3fbf6">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="Yes"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#DBF2E5" />
+                    <path
+                      d="M6.2 10.2l2.4 2.4 5.2-5.4"
+                      stroke="#337F53"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="padding: 16px 20px">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-label="No"
+                  >
+                    <circle cx="10" cy="10" r="9" fill="#FBEAE9" />
+                    <path
+                      d="M7 7l6 6M13 7l-6 6"
+                      stroke="#D42620"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add-ons -->
+        <div style="padding: 88px 100px 96px">
+          <div style="max-width: 1240px; margin: 0 auto">
+            <h2
+              style="
+                margin: 0 0 12px;
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 42px;
+                line-height: 1.08;
+                font-weight: 700;
+                letter-spacing: -0.026em;
+              "
+            >
+              Add these when you need them
+            </h2>
+            <p
+              style="
+                margin: 0 0 36px;
+                font-size: 19px;
+                line-height: 1.55;
+                color: #585b5d;
+                max-width: 700px;
+              "
+            >
+              Not upsells we push on day one. Most sellers start without any of
+              them and add one later.
+            </p>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 20px;
+              "
+            >
+              <div
+                class="lift"
+                style="
+                  padding: 24px 26px;
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    margin-bottom: 6px;
+                  "
+                >
+                  More products
+                </div>
+                <div
+                  style="
+                    font-size: 15.5px;
+                    line-height: 1.55;
+                    color: #585b5d;
+                    margin-bottom: 14px;
+                  "
+                >
+                  Past the first 30, in blocks of 20.
+                </div>
+                <div style="font-size: 20px; font-weight: 600; color: #337f53">
+                  [ADD-ON PRICE]
+                </div>
+              </div>
+              <div
+                class="lift"
+                style="
+                  padding: 24px 26px;
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    margin-bottom: 6px;
+                  "
+                >
+                  Courier pickup and tracking
+                </div>
+                <div
+                  style="
+                    font-size: 15.5px;
+                    line-height: 1.55;
+                    color: #585b5d;
+                    margin-bottom: 14px;
+                  "
+                >
+                  GIGL, Kwik or Sendbox quoting live at checkout.
+                </div>
+                <div style="font-size: 20px; font-weight: 600; color: #337f53">
+                  [ADD-ON PRICE]
+                </div>
+              </div>
+              <div
+                class="lift"
+                style="
+                  padding: 24px 26px;
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    margin-bottom: 6px;
+                  "
+                >
+                  Your own domain
+                </div>
+                <div
+                  style="
+                    font-size: 15.5px;
+                    line-height: 1.55;
+                    color: #585b5d;
+                    margin-bottom: 14px;
+                  "
+                >
+                  Bought, pointed and secured for you.
+                </div>
+                <div style="font-size: 20px; font-weight: 600; color: #337f53">
+                  [ADD-ON PRICE]
+                </div>
+              </div>
+              <div
+                class="lift"
+                style="
+                  padding: 24px 26px;
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    margin-bottom: 6px;
+                  "
+                >
+                  Google and search setup
+                </div>
+                <div
+                  style="
+                    font-size: 15.5px;
+                    line-height: 1.55;
+                    color: #585b5d;
+                    margin-bottom: 14px;
+                  "
+                >
+                  Business profile, sitemap, product listings indexed.
+                </div>
+                <div style="font-size: 20px; font-weight: 600; color: #337f53">
+                  [ADD-ON PRICE]
+                </div>
+              </div>
+              <div
+                class="lift"
+                style="
+                  padding: 24px 26px;
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    margin-bottom: 6px;
+                  "
+                >
+                  Instagram catalogue sync
+                </div>
+                <div
+                  style="
+                    font-size: 15.5px;
+                    line-height: 1.55;
+                    color: #585b5d;
+                    margin-bottom: 14px;
+                  "
+                >
+                  Your products where your customers already are.
+                </div>
+                <div style="font-size: 20px; font-weight: 600; color: #337f53">
+                  [ADD-ON PRICE]
+                </div>
+              </div>
+              <div
+                class="lift"
+                style="
+                  padding: 24px 26px;
+                  border-radius: 10px;
+                  background: #ffffff;
+                  border: 1px solid #e4e2db;
+                "
+              >
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: #0f2518;
+                    margin-bottom: 6px;
+                  "
+                >
+                  We run it for you
+                </div>
+                <div
+                  style="
+                    font-size: 15.5px;
+                    line-height: 1.55;
+                    color: #585b5d;
+                    margin-bottom: 14px;
+                  "
+                >
+                  Product uploads, price changes, priority replies.
+                </div>
+                <div style="font-size: 20px; font-weight: 600; color: #337f53">
+                  [ADD-ON PRICE] / month
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Close -->
+        <div
+          style="
+            padding: 84px 100px 96px;
+            background: #ffffff;
+            border-top: 1px solid #e4e2db;
+          "
+        >
+          <div style="max-width: 760px; margin: 0 auto; text-align: center">
+            <h2
+              style="
+                margin: 0 0 16px;
+                font-family:
+                  'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 44px;
+                line-height: 1.06;
+                font-weight: 700;
+                letter-spacing: -0.028em;
+              "
+            >
+              Still cheaper than one lost order a week.
+            </h2>
+            <p
+              style="
+                margin: 0 0 32px;
+                font-size: 19px;
+                line-height: 1.55;
+                color: #585b5d;
+              "
+            >
+              Have a look at a real store first if you would rather see it than
+              read about it.
+            </p>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 14px;
+              "
+            >
+              <a
+                href="#"
+                class="btn"
+                style="
+                  display: inline-flex;
+                  align-items: center;
+                  height: 52px;
+                  padding: 0 26px;
+                  border-radius: 4px;
+                  background: #4dbf7d;
+                  border: 1px solid #4dbf7d;
+                  color: #ffffff;
+                  font-size: 17px;
+                  font-weight: 500;
+                "
+                >Start your store</a
+              >
+              <a
+                href="#"
+                class="ghost"
+                style="
+                  display: inline-flex;
+                  align-items: center;
+                  height: 52px;
+                  padding: 0 24px;
+                  border-radius: 4px;
+                  background: #ffffff;
+                  border: 1px solid #d6d8d9;
+                  color: #0f2518;
+                  font-size: 17px;
+                  font-weight: 500;
+                "
+                >Open the demo store</a
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div
+          style="
+            background: #0f2518;
+            color: #a6dfbe;
+            padding: 40px 100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14.5px;
+          "
+        >
+          <span>© 2026 {{brandName}}. All prices in Naira.</span>
+          <span>Payments processed by Paystack.</span>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      data-dc-script
+      data-props='{"brandName":{"editor":"text","default":"[BRAND]","section":"Content"},"buildPrice":{"editor":"text","default":"₦75,000","section":"Pricing"},"hostingPrice":{"editor":"text","default":"₦7,500","section":"Pricing"}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            brandName: this.props.brandName ?? '[BRAND]',
+            buildPrice: this.props.buildPrice ?? '₦75,000',
+            hostingPrice: this.props.hostingPrice ?? '₦7,500',
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

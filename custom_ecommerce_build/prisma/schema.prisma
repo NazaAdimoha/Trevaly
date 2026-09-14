@@ -1,0 +1,494 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi-tenant e-commerce schema
+//
+// One shared database. Every table holding tenant-owned data carries a
+// `tenantId` column + index so queries stay fast and isolated as client count
+// grows. Never add a tenant-owned model without BOTH.
+//
+// Money is always an integer in kobo (`*Kobo`). Never Float — floating-point
+// currency math compounds rounding errors across thousands of orders.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  // Prisma 7: `prisma-client-js` is deprecated in favour of `prisma-client`,
+  // which requires an explicit output path and emits ESM.
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7 removed `url`/`directUrl` from the schema. Connection URLs for
+// Migrate now live in `prisma.config.ts`, and the runtime client is given a
+// driver adapter (see src/lib/prisma.ts).
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+// Source of truth for domain values. Import the generated Prisma enums directly
+// in application code — never re-declare a parallel string union.
+
+enum TenantStatus {
+  ONBOARDING // created, not yet taking payments (subaccount pending)
+  ACTIVE
+  SUSPENDED // e.g. non-payment — data retained, storefront offline
+}
+
+enum TenantRole {
+  OWNER
+  STAFF
+}
+
+// How a tenant's storefront looks. A BOUNDED ENUM, deliberately.
+//
+// This is the line between "themes" and the per-client codebase the whole
+// architecture exists to avoid: every theme ships to every tenant in the same
+// bundle, is fixed once for everyone, and is selected by this column. There is
+// no per-tenant stylesheet, no uploaded CSS, and no free-text theme name —
+// tenant-supplied CSS on a shared domain is an XSS vector and a support
+// catastrophe.
+//
+// Themes may differ in layout, density, shape and typography ONLY. They must
+// never differ in data, routes or business logic: one checkout, one cart, one
+// fulfillment path, verified once.
+enum StorefrontTheme {
+  CLASSIC // general retail — square imagery, balanced density
+  EDITORIAL // fashion, beauty, jewellery — tall imagery, airy, serif
+  UTILITY // electronics, groceries, parts — dense, price-forward, SKUs
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  SUPPORT
+}
+
+enum OrderStatus {
+  PENDING // created, payment not yet confirmed
+  PAID // server-side verified against the gateway
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  ZONE_DELIVERY
+  COURIER_API
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  FLUTTERWAVE
+}
+
+enum WebhookStatus {
+  RECEIVED // persisted, not yet processed
+  PROCESSED
+  FAILED // retained for replay
+  IGNORED // well-formed but not an event we act on
+}
+
+// ─── Platform ────────────────────────────────────────────────────────────────
+
+// You and your team. Identity lives in Clerk; this row carries authorization.
+model PlatformUser {
+  id          String       @id @default(cuid())
+  clerkUserId String       @unique
+  email       String
+  role        PlatformRole @default(SUPPORT)
+  createdAt   DateTime     @default(now())
+
+  @@index([clerkUserId])
+}
+
+// One row per business using the platform.
+model Tenant {
+  id     String       @id @default(cuid())
+  name   String
+  slug   String       @unique // "adaobi-store" -> adaobi-store.yourbrand.com
+  status TenantStatus @default(ONBOARDING)
+
+  customDomain         String?   @unique // optional: adaobistore.com
+  customDomainVerified Boolean   @default(false)
+  domainAddedAt        DateTime?
+
+  // Branding
+  //
+  // A Cloudinary PUBLIC ID, not a delivery URL — same rule as `Product.imageUrls`.
+  // A stored URL freezes the transformation chosen at upload time; the id lets
+  // each surface derive its own size, and the storefront header, the 54px avatar
+  // in the app and a 1200x630 OG image are three very different sizes.
+  logoPublicId String?
+  primaryColor String?
+  tagline      String?
+  theme        StorefrontTheme @default(CLASSIC)
+
+  // Contact — used on the storefront and on order emails
+  contactEmail    String?
+  whatsappNumber  String?
+  storeAddress    String?
+  currency        String  @default("NGN")
+
+  // Payment settlement. Funds settle directly to the tenant's own bank account
+  // via the provider's subaccount split — never through a platform account.
+  paystackSubaccountCode  String?
+  flutterwaveSubaccountId String?
+  platformFeePercent      Decimal @default(0) @db.Decimal(5, 2) // 1.00 = 1%
+
+  // Monotonic per-tenant counter backing the human-readable Order.orderNumber.
+  orderSequence Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         TenantUser[]
+  products      Product[]
+  variants      ProductVariant[]
+  categories    Category[]
+  orders        Order[]
+  coupons       Coupon[]
+  deliveryZones DeliveryZone[]
+
+  @@index([slug])
+  @@index([customDomain])
+  @@index([status])
+}
+
+// Membership. Clerk owns the credential; this table owns "who may act for whom".
+// Deliberately NOT Clerk Organizations — see BUILD_PLAN.md D3 (org-count
+// pricing is misaligned with a 50-new-tenants/month business).
+model TenantUser {
+  id          String     @id @default(cuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clerkUserId String
+  email       String
+  role        TenantRole @default(OWNER)
+  invitedAt   DateTime?
+  acceptedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@unique([tenantId, clerkUserId])
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([clerkUserId]) // "which stores can this user administer?"
+}
+
+// ─── Catalogue ───────────────────────────────────────────────────────────────
+
+model Category {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+  slug     String
+  position Int     @default(0)
+  isActive Boolean @default(true)
+
+  products Product[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  name        String
+  slug        String
+  sku         String?
+  description String?
+  priceKobo   Int // integer kobo — never Float
+
+  // What the variants vary BY: "Size", "Colour", "Weight". Null means this
+  // product has no variants and is bought as-is.
+  //
+  // Deliberately ONE axis, not a Size x Colour matrix. One axis covers a dress
+  // in S/M/L, a shoe in 39-44, rice in 5kg/10kg — which is nearly everything a
+  // 30-product store sells — while a matrix multiplies the admin UI, the CSV
+  // import and the combinatorics for the minority that need it. A seller who
+  // genuinely needs two axes lists "Red / Small" as a value, or splits the
+  // colours into separate products, which is what they already do on Instagram.
+  optionName  String?
+
+  // Ignored entirely when `variants` is non-empty: the truth is then per
+  // variant. Never sum variants into here — a denormalised total drifts, and
+  // the copy that drifts is the one checkout reads.
+  stock       Int      @default(0)
+  imageUrls   String[] @default([])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+  variants   ProductVariant[]
+
+  @@unique([tenantId, slug])
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([categoryId])
+}
+
+// One buyable option of a product — "Small", "42", "5kg".
+//
+// Stock lives HERE for a product that has variants, and that is the whole
+// point: selling the last size 42 must not mark size 40 sold out. Checkout
+// prices and reserves against this row, and `verifyAndFulfillOrder` decrements
+// it under the same conditional guard the product path uses.
+model ProductVariant {
+  id        String  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  value String // the option value itself: "Small", "42", "5kg"
+  sku   String?
+
+  // Null means "same as the parent product". Most variants do not change the
+  // price, and storing a copy would leave two numbers to keep in step.
+  priceKobo Int?
+  stock     Int     @default(0)
+  position  Int     @default(0) // author's order — S, M, L is not alphabetical
+  isActive  Boolean @default(true)
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Per product, not per tenant: two products may both offer "Small".
+  @@unique([productId, value])
+  @@index([tenantId])
+  @@index([productId])
+}
+
+model DeliveryZone {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String // e.g. "Lagos Mainland"
+  feeKobo  Int
+  position Int     @default(0)
+  isActive Boolean @default(true)
+
+  orders Order[]
+
+  @@index([tenantId])
+}
+
+model Coupon {
+  id           String     @id @default(cuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String
+  type         CouponType
+  value        Int // percentage (1-100) OR fixed kobo, per `type`
+  minOrderKobo Int?       @default(0)
+  maxUses      Int?
+  timesUsed    Int        @default(0)
+  expiresAt    DateTime?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  orders Order[]
+
+  // Per-tenant, not global — two businesses can both run WELCOME10.
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+
+model Order {
+  id       String      @id @default(cuid())
+  tenantId String
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status   OrderStatus @default(PENDING)
+
+  // Human-readable, per-tenant (#1042). `paymentReference` is a machine key —
+  // never show it to a customer or a store owner.
+  orderNumber Int
+
+  customerName  String
+  customerEmail String
+  customerPhone String
+
+  deliveryMethod  DeliveryMethod @default(ZONE_DELIVERY)
+  deliveryZoneId  String?
+  deliveryZone    DeliveryZone?  @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull)
+  deliveryAddress String?
+  deliveryFeeKobo Int            @default(0)
+
+  couponId     String?
+  coupon       Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  discountKobo Int     @default(0)
+
+  subtotalKobo Int
+  totalKobo    Int
+
+  // Generated server-side at checkout and globally unique. This is what makes
+  // fulfillment idempotent: a webhook arriving after the client already
+  // verified finds a PAID order and does nothing.
+  paymentReference  String          @unique
+  paymentProvider   PaymentProvider @default(PAYSTACK)
+  paidAmountKobo    Int? // what the gateway actually captured
+  paymentVerifiedAt DateTime?
+
+  // The platform's cut, in kobo, exactly as sent to the gateway as
+  // `transaction_charge` at initialization. Snapshotted here rather than
+  // recomputed at fulfillment, because `Tenant.platformFeePercent` can change
+  // between an order being placed and its payment landing — and the number that
+  // matters for reconciliation is the one the gateway was actually told.
+  platformFeeKobo Int @default(0)
+  // The rate that produced it, for the same reason.
+  platformFeePercent Decimal @default(0) @db.Decimal(5, 2)
+
+  // Set when stock could not be decremented at fulfillment time (concurrent
+  // sale of the last unit). The order is still PAID — the customer's money is
+  // real — and the tenant resolves it manually. Never silently drop a paid order.
+  hasStockIssue Boolean @default(false)
+  internalNote  String?
+
+  // ── Payment failure ────────────────────────────────────────────────────────
+  // Recorded, NOT acted on. A declined card can be retried and paid minutes
+  // later, so cancelling the order here would destroy a live sale. The merchant
+  // sees "payment failed" instead of a PENDING row that never explains itself.
+  paymentFailedAt      DateTime?
+  paymentFailureReason String?
+
+  // ── Refunds ────────────────────────────────────────────────────────────────
+  // The amount matters as much as the fact: Paystack supports partial refunds,
+  // and a ₦5,000 refund on a ₦40,000 order is not a refunded order. Status only
+  // becomes REFUNDED once the full captured amount has been returned.
+  refundedAmountKobo Int       @default(0)
+  refundedAt         DateTime?
+
+  // ── Disputes / chargebacks ─────────────────────────────────────────────────
+  // A FLAG, not a status — deliberately, like `hasStockIssue`. A chargeback can
+  // land on a DELIVERED order, and folding it into `status` would erase the
+  // fulfilment state the merchant still needs. `disputeStatus` holds Paystack's
+  // own string so we are not translating a vocabulary we do not own.
+  disputedAt       DateTime?
+  disputeStatus    String?
+  disputeReason    String?
+  disputeAmountKobo Int?
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt]) // admin order list default sort
+  @@index([paymentReference])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  // Restrict, not Cascade: deleting a product must never rewrite order history.
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  // Null for a product bought without variants. Restrict for the same reason as
+  // the product: a merchant retires a variant with `isActive: false`, never by
+  // deleting a row that an order points at.
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  quantity Int
+
+  // Snapshots taken at purchase time. Deliberately duplicated from Product so a
+  // later price change or rename cannot silently rewrite a historic receipt.
+  productName   String
+  // "Size: Small" — the whole label, so a receipt reads correctly even after
+  // the product's `optionName` is renamed or the variant is deleted.
+  variantLabel  String?
+  unitPriceKobo Int
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+// ─── Reconciliation ──────────────────────────────────────────────────────────
+
+// Every inbound gateway event is persisted BEFORE it is processed. At 50
+// clients' transaction volume an unlogged failed webhook is real money you
+// cannot trace back.
+// What the platform earned, one row per fulfilled order.
+//
+// Without this table the platform's own revenue exists only inside Paystack:
+// the split happens at settlement, the money arrives, and nothing in our
+// database knows it. That makes the operator dashboard unable to show a revenue
+// figure, makes reconciliation a manual export, and means a misconfigured
+// split (a tenant created with the wrong percentage, or none) is invisible
+// until someone notices the bank balance is wrong.
+//
+// Written inside the fulfillment transaction in `verifyAndFulfillOrder`, gated
+// on the same conditional PENDING -> PAID claim as the stock decrement, so it
+// is written exactly once per order no matter how many callers race.
+//
+// `amountKobo` is what we ASKED Paystack to route to the platform account
+// (`transaction_charge`), recorded at fulfillment. It is an expectation, not a
+// settlement confirmation — settlement lands days later and is reconciled
+// against this row, which is the entire point of keeping it.
+model PlatformEarning {
+  id        String          @id @default(cuid())
+  tenantId  String
+  orderId   String          @unique // one earning per order; the idempotency guard
+  reference String // Order.paymentReference, for matching against a payout
+  provider  PaymentProvider
+  /// Platform cut in kobo, as sent to the gateway at initialization.
+  amountKobo Int
+  /// The rate that produced it, snapshotted — Tenant.platformFeePercent changes.
+  feePercent Decimal        @db.Decimal(5, 2)
+  /// Gross order total the cut was taken from.
+  orderTotalKobo Int
+  createdAt DateTime        @default(now())
+
+  /// Set when the order behind this earning was refunded. The row is kept, not
+  /// deleted: platform revenue is an accounting record, and a disappearing row
+  /// makes a period that was already reported irreproducible. Revenue queries
+  /// exclude reversed rows.
+  reversedAt DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([reference])
+  @@index([createdAt])
+}
+
+model WebhookEvent {
+  id              String          @id @default(cuid())
+  provider        PaymentProvider
+  providerEventId String? // dedupe key where the provider supplies one
+  eventType       String
+  reference       String? // Order.paymentReference, when present
+  tenantId        String? // from transaction metadata; null if unresolvable
+  payload         Json // raw body
+  status          WebhookStatus   @default(RECEIVED)
+  error           String?
+  attempts        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  processedAt     DateTime?
+
+  @@unique([provider, providerEventId])
+  @@index([reference])
+  @@index([status, createdAt])
+  @@index([tenantId])
+}

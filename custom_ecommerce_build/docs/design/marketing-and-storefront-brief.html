@@ -1,0 +1,1836 @@
+<title>Marketing Site &amp; Storefront — Design Brief</title>
+
+<style>
+  /* ─── Tokens ─────────────────────────────────────────────────────────── */
+  :root {
+    --paper: #f7f8f7;
+    --surface: #ffffff;
+    --surface-2: #eff2f0;
+    --ink: #14181a;
+    --ink-2: #384344;
+    --muted: #5c6a6b;
+    --hairline: #dde3e1;
+    --hairline-2: #c8d2cf;
+    --accent: #0e6b4f;
+    --accent-ink: #ffffff;
+    --accent-wash: #e4efe9;
+    --amber: #8a5a12;
+    --amber-wash: #f6eedd;
+    --rust: #9c3a2c;
+    --rust-wash: #f7e8e4;
+    --shadow:
+      0 1px 2px rgba(20, 24, 26, 0.05), 0 8px 24px -16px rgba(20, 24, 26, 0.18);
+
+    --sans:
+      ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    --serif: Georgia, 'Iowan Old Style', 'Source Serif Pro', ui-serif, serif;
+    --mono:
+      ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas,
+      'Liberation Mono', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #0f1413;
+      --surface: #161c1b;
+      --surface-2: #1d2524;
+      --ink: #e8edea;
+      --ink-2: #c3cdc9;
+      --muted: #8b9995;
+      --hairline: #2a3432;
+      --hairline-2: #3a4643;
+      --accent: #3fbf8f;
+      --accent-ink: #08130e;
+      --accent-wash: #132a22;
+      --amber: #d7a253;
+      --amber-wash: #2a2318;
+      --rust: #e08472;
+      --rust-wash: #2c1b18;
+      --shadow:
+        0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.7);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --paper: #0f1413;
+    --surface: #161c1b;
+    --surface-2: #1d2524;
+    --ink: #e8edea;
+    --ink-2: #c3cdc9;
+    --muted: #8b9995;
+    --hairline: #2a3432;
+    --hairline-2: #3a4643;
+    --accent: #3fbf8f;
+    --accent-ink: #08130e;
+    --accent-wash: #132a22;
+    --amber: #d7a253;
+    --amber-wash: #2a2318;
+    --rust: #e08472;
+    --rust-wash: #2c1b18;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.7);
+  }
+
+  /* ─── Base ───────────────────────────────────────────────────────────── */
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 120px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 56px;
+  }
+
+  @media (min-width: 1000px) {
+    .wrap {
+      grid-template-columns: 200px minmax(0, 1fr);
+    }
+  }
+
+  /* ─── Masthead ───────────────────────────────────────────────────────── */
+  .masthead {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--hairline);
+    padding: 72px 0 40px;
+    margin-bottom: 56px;
+  }
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  .masthead h1 {
+    font-family: var(--sans);
+    font-size: clamp(34px, 5.5vw, 54px);
+    font-weight: 680;
+    letter-spacing: -0.028em;
+    line-height: 1.06;
+    text-wrap: balance;
+    max-width: 15ch;
+  }
+  .standfirst {
+    margin-top: 22px;
+    max-width: 60ch;
+    font-size: 19px;
+    color: var(--ink-2);
+  }
+  .meta-row {
+    margin-top: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .meta-row b {
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+
+  /* ─── Contents rail ──────────────────────────────────────────────────── */
+  .rail {
+    display: none;
+  }
+  @media (min-width: 1000px) {
+    .rail {
+      display: block;
+      position: sticky;
+      top: 32px;
+      align-self: start;
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+    }
+  }
+  .rail-title {
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .rail-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 12px;
+  }
+  .rail-list a {
+    display: block;
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition:
+      color 0.12s,
+      background-color 0.12s;
+  }
+  .rail-list a:hover {
+    color: var(--ink);
+    background: var(--surface-2);
+  }
+  .rail-list a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* ─── Prose column ───────────────────────────────────────────────────── */
+  .doc {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .doc > section {
+    padding-bottom: 12px;
+  }
+  .doc > section + section {
+    margin-top: 64px;
+  }
+
+  .doc h2 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 640;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .doc h2 span {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .doc h3 {
+    font-family: var(--sans);
+    font-size: 20px;
+    font-weight: 640;
+    letter-spacing: -0.014em;
+    line-height: 1.25;
+    text-wrap: balance;
+    margin: 40px 0 12px;
+  }
+  .doc h4 {
+    font-family: var(--sans);
+    font-size: 14.5px;
+    font-weight: 640;
+    letter-spacing: -0.005em;
+    margin: 28px 0 8px;
+  }
+  .doc h3:first-of-type {
+    margin-top: 0;
+  }
+
+  .doc p {
+    max-width: 66ch;
+    margin-bottom: 16px;
+  }
+  .doc p:last-child {
+    margin-bottom: 0;
+  }
+
+  .lede {
+    font-size: 18.5px;
+    color: var(--ink-2);
+  }
+
+  .doc ul,
+  .doc ol {
+    max-width: 66ch;
+    margin: 0 0 16px;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .doc li {
+    padding-left: 2px;
+  }
+  .doc li::marker {
+    color: var(--hairline-2);
+  }
+  .doc ol li::marker {
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+
+  strong {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  em {
+    font-style: italic;
+  }
+
+  code,
+  .mono {
+    font-family: var(--mono);
+    font-size: 0.855em;
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 0.1em 0.34em;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  a.inline {
+    color: var(--accent);
+    text-underline-offset: 2px;
+  }
+
+  /* ─── Chips ──────────────────────────────────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 640;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .chip-built {
+    background: var(--accent-wash);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .chip-partial {
+    background: var(--amber-wash);
+    color: var(--amber);
+    border-color: color-mix(in srgb, var(--amber) 26%, transparent);
+  }
+  .chip-missing {
+    background: var(--rust-wash);
+    color: var(--rust);
+    border-color: color-mix(in srgb, var(--rust) 26%, transparent);
+  }
+  .chip-neutral {
+    background: var(--surface-2);
+    color: var(--muted);
+    border-color: var(--hairline);
+  }
+
+  /* ─── Callouts ───────────────────────────────────────────────────────── */
+  .note {
+    max-width: 66ch;
+    border-left: 3px solid var(--hairline-2);
+    background: var(--surface);
+    padding: 18px 22px;
+    margin: 24px 0;
+    box-shadow: var(--shadow);
+    border-radius: 0 4px 4px 0;
+  }
+  .note p {
+    margin-bottom: 10px;
+  }
+  .note p:last-child {
+    margin-bottom: 0;
+  }
+  .note-label {
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 640;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .note-rule {
+    border-left-color: var(--accent);
+  }
+  .note-rule .note-label {
+    color: var(--accent);
+  }
+  .note-never {
+    border-left-color: var(--rust);
+  }
+  .note-never .note-label {
+    color: var(--rust);
+  }
+  .note-open {
+    border-left-color: var(--amber);
+  }
+  .note-open .note-label {
+    color: var(--amber);
+  }
+
+  /* ─── Tables ─────────────────────────────────────────────────────────── */
+  .table-scroll {
+    overflow-x: auto;
+    margin: 24px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 5px;
+    background: var(--surface);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 13.5px;
+  }
+  thead th {
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 640;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: top;
+    color: var(--ink-2);
+    line-height: 1.45;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  td.num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  td .mono,
+  th .mono {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+
+  /* ─── Brand swatch demo ──────────────────────────────────────────────── */
+  .demo {
+    margin: 28px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .demo-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--hairline);
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 1px;
+    background: var(--hairline);
+  }
+  .swatch {
+    background: var(--surface);
+    padding: 16px 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .swatch-hex {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .swatch-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--brand);
+    border: 1px solid var(--hairline-2);
+    flex: none;
+  }
+  .swatch-btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--brand);
+    color: #fff;
+    border-radius: 4px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .swatch-badge {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--brand);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .swatch-verdict {
+    font-family: var(--sans);
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .swatch-verdict.bad {
+    color: var(--rust);
+  }
+
+  /* ─── State flow ─────────────────────────────────────────────────────── */
+  .states {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .state {
+    flex: 1 1 190px;
+    border: 1px solid var(--hairline);
+    border-top: 3px solid var(--hairline-2);
+    border-radius: 0 0 5px 5px;
+    background: var(--surface);
+    padding: 14px 16px 16px;
+  }
+  .state-a {
+    border-top-color: var(--muted);
+  }
+  .state-b {
+    border-top-color: var(--accent);
+  }
+  .state-c {
+    border-top-color: var(--amber);
+  }
+  .state-d {
+    border-top-color: var(--rust);
+    background: var(--rust-wash);
+  }
+  .state-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 7px;
+  }
+  .state-copy {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  /* ─── Page-spec cards ────────────────────────────────────────────────── */
+  .spec {
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    background: var(--surface);
+    margin: 20px 0;
+    overflow: hidden;
+  }
+  .spec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface-2);
+  }
+  .spec-route {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .spec-body {
+    padding: 18px 18px 20px;
+  }
+  .spec-body p,
+  .spec-body ul {
+    max-width: none;
+  }
+  .spec-body > :last-child {
+    margin-bottom: 0;
+  }
+  .spec-file {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    padding: 0 18px 14px;
+  }
+
+  .footer-note {
+    grid-column: 1 / -1;
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--hairline);
+    font-family: var(--sans);
+    font-size: 12.5px;
+    color: var(--muted);
+    max-width: 70ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Design brief · Multi-tenant commerce</div>
+    <h1>The marketing site and the storefront</h1>
+    <p class="standfirst">
+      Two surfaces, one codebase, two entirely different audiences. One of them
+      we design for ourselves and control completely. The other gets worn by
+      fifty businesses we haven't met yet, and that constraint decides almost
+      every choice in it.
+    </p>
+    <div class="meta-row">
+      <span><b>For</b> design</span>
+      <span><b>Scope</b> marketing site + public storefront</span>
+      <span><b>Not in scope</b> tenant admin dashboard</span>
+      <span><b>Market</b> Nigeria · NGN only</span>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Contents">
+    <div class="rail-title">Contents</div>
+    <ul class="rail-list">
+      <li><a href="#business">The business underneath</a></li>
+      <li><a href="#surfaces">Two surfaces, two jobs</a></li>
+      <li><a href="#marketing">Surface A — Marketing site</a></li>
+      <li><a href="#storefront">Surface B — Storefront</a></li>
+      <li><a href="#brand">The brand-variable problem</a></li>
+      <li><a href="#trust">Trust is the design problem</a></li>
+      <li><a href="#speed">Speed is a design constraint</a></li>
+      <li><a href="#states">States and edges</a></li>
+      <li><a href="#never">What this will never have</a></li>
+      <li><a href="#decisions">Decisions I need from you</a></li>
+      <li><a href="#state-map">Current state map</a></li>
+    </ul>
+  </nav>
+
+  <main class="doc">
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="business">
+      <h2>
+        The business underneath
+        <span>Why any of this looks the way it does</span>
+      </h2>
+
+      <p class="lede">
+        We sell a working online store to Nigerian small businesses — a real
+        one, where money actually moves and stock actually decrements — and the
+        target is roughly fifty of them a month.
+      </p>
+
+      <p>
+        Where we sit in that market is the single most useful thing to hold in
+        your head, because we're between two competitors who are both easy to
+        name. Below us, at around ₦25,000, is the WordPress-and-Elementor crowd
+        selling a brochure site: four pages, a contact form, no cart. Above us,
+        at ₦150,000 and up, are agencies selling bespoke work. We are closer to
+        the brochure end on price and much closer to the agency end on what the
+        thing actually does, and that gap is the entire pitch.
+      </p>
+
+      <div class="note note-open">
+        <div class="note-label">Not yet fixed</div>
+        <p>
+          Our own price isn't settled, so nothing in this brief quotes one.
+          Please design the pricing page around a figure that can change — a
+          single prominent number with room to breathe, not a layout that only
+          works at a particular character count or a comparison table with the
+          number baked into the composition.
+        </p>
+      </div>
+
+      <p>
+        The economics only work because it is one application, not fifty. Every
+        business is a row in a shared database, isolated by a tenant ID, served
+        from one deployment. A tenant gets
+        <code>theirstore.yourbrand.com</code> for free, or points their own
+        domain at us.
+        <strong
+          >Onboarding a client is a configuration task, not a build.</strong
+        >
+        Everything in this brief follows from that: you are designing a
+        template, once, and every design decision either survives fifty unknown
+        brands or it doesn't ship.
+      </p>
+
+      <p>
+        One more piece of the model matters for the marketing copy. Customer
+        payments never pass through an account we control — Paystack splits each
+        transaction at settlement and the money lands directly in the client's
+        own bank account. That isn't a technical footnote, it's the answer to
+        the loudest objection a Nigerian business owner will have about handing
+        their sales to a stranger's website, and it deserves real estate on the
+        marketing site.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="surfaces">
+      <h2>
+        Two surfaces, two jobs <span>Same codebase, opposite briefs</span>
+      </h2>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Marketing site</th>
+              <th>Storefront</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Lives at</strong></td>
+              <td><span class="mono">yourbrand.com</span></td>
+              <td>
+                <span class="mono">{store}.yourbrand.com</span> or the tenant's
+                own domain
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Audience</strong></td>
+              <td>
+                A business owner currently selling in Instagram comments and
+                WhatsApp DMs
+              </td>
+              <td>That owner's customer, arriving from a link in a bio</td>
+            </tr>
+            <tr>
+              <td><strong>The job</strong></td>
+              <td>
+                Convince them that a real store is worth paying for and that we
+                won't touch their money
+              </td>
+              <td>
+                Get one product bought without friction and without triggering
+                scam suspicion
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Branding</strong></td>
+              <td>Ours. Full freedom.</td>
+              <td>
+                Theirs — but expressed through exactly one hex value, a logo,
+                and a tagline
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Designed</strong></td>
+              <td>Once, for one client: us</td>
+              <td>Once, for fifty clients we haven't met</td>
+            </tr>
+            <tr>
+              <td><strong>Auth</strong></td>
+              <td>Store owners sign in (Clerk)</td>
+              <td><strong>Never.</strong> Shoppers do not have accounts</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        The storefront is the harder brief and the more valuable one — it's the
+        thing fifty clients look at every day and the thing their customers
+        judge. The marketing site is the easier brief but it's what converts, so
+        it can't be an afterthought either.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="marketing">
+      <h2>Surface A — the marketing site <span>Root domain</span></h2>
+
+      <h3>What we are actually competing against</h3>
+
+      <p>
+        Not other web design agencies. The real competitor is
+        <strong>doing nothing</strong> — continuing to sell through DMs. That's
+        free, it already works well enough, and it's familiar. So a page that
+        leads with "get a beautiful website" argues against the wrong thing,
+        because the seller doesn't feel the absence of a website. They feel
+        specific, daily, nameable pain:
+      </p>
+
+      <ul>
+        <li>
+          Chasing payment screenshots and squinting at them to check they're
+          real
+        </li>
+        <li>Orders buried in an inbox with three hundred other messages</li>
+        <li>
+          Working out a delivery fee by hand, in a DM, for every single customer
+        </li>
+        <li>No idea what's actually in stock without walking to the shelf</li>
+        <li>
+          Sending account numbers to strangers and hoping the transfer lands
+        </li>
+      </ul>
+
+      <p>
+        That list is the copy spine of the home page. Every feature we have maps
+        onto one of those pains — checkout replaces the screenshot chase,
+        delivery zones replace the mental arithmetic, the orders list replaces
+        the inbox. Lead with the pain, land the feature second.
+      </p>
+
+      <h3>Where the visitor comes from, and what that means</h3>
+
+      <p>
+        Almost entirely from Instagram, TikTok, or a WhatsApp forward. Two
+        consequences:
+      </p>
+
+      <ol>
+        <li>
+          <strong
+            >Mobile-first is not a nicety, it's the only view most people will
+            ever see</strong
+          >
+          — and often inside an in-app browser with a fat top and bottom chrome,
+          so vertical space is tighter than a normal mobile viewport.
+        </li>
+        <li>
+          <strong>The page will be screenshotted and forwarded.</strong> That's
+          genuinely the distribution mechanic. Design at least one screen — most
+          likely the pricing block — so that a phone screenshot of it, with no
+          surrounding context, still explains the offer and carries the domain.
+        </li>
+      </ol>
+
+      <h3>Sections the home page needs</h3>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">Hero</span>
+          <span class="chip chip-missing">Placeholder only</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Show the product, not a stock photo of a smiling woman with a
+            laptop. The most persuasive thing we own is a real storefront on a
+            real phone. A device frame with an actual seeded store in it does
+            more work than any illustration, and it costs nothing because the
+            store already exists.
+          </p>
+          <p>
+            Headline should name the outcome in the seller's language — taking
+            orders and getting paid — not the artifact ("a website").
+          </p>
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">Live demo store</span>
+          <span class="chip chip-missing">Not built</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            A prominent link to a real, browsable, seeded storefront. This is
+            the single highest-converting asset on the site and it already
+            exists in the system — two demo tenants are seeded. Someone who adds
+            a product to a cart on the demo has effectively pre-sold themselves.
+            Treat it as a primary call to action sitting beside "Get started",
+            not a small text link.
+          </p>
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route"
+            >"Your money goes straight to your bank"</span
+          >
+          <span class="chip chip-missing">Not built</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            The trust objection, answered visually. Customer pays → Paystack
+            splits → the client's own bank account. We are never a box in that
+            diagram holding funds. This wants to be an actual drawn flow, not
+            three bullet points, because the shape of the diagram
+            <em>is</em> the argument: there's no reservoir in the middle.
+          </p>
+          <p>
+            Adjacent to it: the client keeps their own Paystack dashboard and
+            can see their own money at any time. That detail defuses the
+            follow-up objection.
+          </p>
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">What you get / What you operate</span>
+          <span class="chip chip-missing">Not built</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Two distinct ideas that often get merged and shouldn't be.
+            <em>What you get</em> is the storefront — cart, checkout, coupons,
+            delivery zones. <em>What you operate</em> is the admin dashboard,
+            and it's underrated as a selling point: the client will be in it
+            every day adding products and marking orders shipped. Show it. A
+            screenshot of a clean orders table is a feature, because the
+            alternative they're living with is a WhatsApp thread.
+          </p>
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/pricing</span>
+          <span class="chip chip-missing">Route reserved, page not built</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            The base package is settled even though the price isn't, and its
+            contents are worth stating plainly rather than hiding behind
+            "contact us":
+          </p>
+          <ul>
+            <li>Up to ~30 products</li>
+            <li>One delivery zone structure, around three tiers</li>
+            <li>One payment gateway</li>
+            <li>One or two launch coupon codes</li>
+            <li>Mobile storefront plus admin access</li>
+            <li>One round of design revisions</li>
+            <li>Seven days of post-launch bug support</li>
+          </ul>
+          <p>
+            Add-ons — extra products, courier integration, monthly maintenance,
+            custom domain setup, SEO basics, catalogue sync — are where margin
+            actually lives, so the pricing page needs a second tier of
+            presentation for them. Not buried, not competing with the headline
+            figure.
+          </p>
+          <p>
+            Worth designing the anchor explicitly: a brochure site next to what
+            this one does. The comparison is what justifies the price, whatever
+            we land on.
+          </p>
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/sign-in · /sign-up</span>
+          <span class="chip chip-partial"
+            >Built, using Clerk's own components</span
+          >
+        </div>
+        <div class="spec-body">
+          <p>
+            These render Clerk's hosted components, so we do not control their
+            markup. Styling happens through Clerk's appearance API — you can set
+            colors, radii, fonts and element-level overrides, but not
+            restructure the form. Please design the surrounding page (the frame,
+            the left panel, the copy) and give me a token set for the form
+            rather than a pixel comp of it.
+          </p>
+        </div>
+      </div>
+
+      <div class="note note-open">
+        <div class="note-label">Note on the header</div>
+        <p>
+          The site header already switches between signed-out (Sign in / Sign
+          up) and signed-in (Dashboard link + account button) states. Two states
+          to design, not one.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="storefront">
+      <h2>
+        Surface B — the storefront
+        <span>Tenant subdomains and custom domains</span>
+      </h2>
+
+      <p class="lede">
+        Everything a tenant can change about their store's appearance is on this
+        list, and the list is deliberately short.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>What it is</th>
+              <th>What you can rely on</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="mono">logoUrl</span></td>
+              <td>One image, any host</td>
+              <td>
+                Nothing. Expect square Instagram avatars, wide wordmarks,
+                transparent PNGs, and 400px-wide JPEGs with white backgrounds.
+                Currently rendered at a fixed 32px height, auto width.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="mono">primaryColor</span></td>
+              <td>One hex string</td>
+              <td>
+                Nothing. See the next section — this is the central design
+                problem.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="mono">name</span></td>
+              <td>Store name</td>
+              <td>Always present. Used as the logo fallback. Can be long.</td>
+            </tr>
+            <tr>
+              <td><span class="mono">tagline</span></td>
+              <td>Short line</td>
+              <td>Optional. Currently footer only.</td>
+            </tr>
+            <tr>
+              <td><span class="mono">contactEmail</span></td>
+              <td>Email</td>
+              <td>Optional. Footer.</td>
+            </tr>
+            <tr>
+              <td><span class="mono">whatsappNumber</span></td>
+              <td>Phone</td>
+              <td>
+                Optional. Rendered as a <span class="mono">wa.me</span> link.
+                High-value for trust.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="mono">storeAddress</span></td>
+              <td>Physical address</td>
+              <td>
+                Exists in the data model,
+                <strong>currently rendered nowhere</strong>. See trust section.
+              </td>
+            </tr>
+            <tr>
+              <td><span class="mono">currency</span></td>
+              <td>NGN</td>
+              <td>Always NGN. Do not design a currency switcher.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note note-rule">
+        <div class="note-label">Hard constraint</div>
+        <p>
+          There is no per-tenant stylesheet, no per-tenant font, no per-tenant
+          layout, and no theme picker. One stylesheet serves every store; the
+          tenant color is injected as a single CSS custom property. A design
+          that needs a second layout variant to look right is a design we can't
+          ship, because "reskin per client" is exactly the cost the whole
+          architecture exists to avoid.
+        </p>
+      </div>
+
+      <h3>The pages</h3>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/ &nbsp;— catalogue</span>
+          <span class="chip chip-partial">Built, minimal</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Today: a bare product grid. Two columns on mobile, three at medium,
+            four at large. Square image, name, price, and an out-of-stock
+            marker. No hero, no categories, no search, no sort, no pagination.
+          </p>
+          <p>
+            That's defensible for a thirty-product store and it's fast, which
+            matters. But the first thing a store owner will ask for is some way
+            to say something above the grid — a banner, a featured product, a
+            line of copy. Worth deciding now whether that's in scope, because it
+            changes the data model.
+          </p>
+        </div>
+        <div class="spec-file">
+          src/components/pages/storefront/home/index.tsx
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/products/[slug]</span>
+          <span class="chip chip-partial">Built, single image only</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Image, name, price, description, a quantity stepper, and
+            add-to-cart. The data model stores an <em>array</em> of image URLs
+            but the page renders only the first one — a gallery is unbuilt and
+            probably should exist, since clothing and accessories are the
+            dominant category and one photo doesn't sell a garment.
+          </p>
+          <p>
+            Descriptions are free text written by the tenant. Expect anything
+            from empty to six paragraphs of unformatted prose with emoji. Design
+            for both ends.
+          </p>
+        </div>
+        <div class="spec-file">
+          src/components/pages/storefront/product-detail/index.tsx
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/cart</span>
+          <span class="chip chip-built">Built</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Line items, quantity adjustment, remove, subtotal. The cart lives in
+            the browser's local storage and is scoped per store, so two
+            storefronts open in the same browser can't contaminate each other.
+          </p>
+          <p>
+            Important consequence for you:
+            <strong>the cart cannot show a delivery fee</strong>, because
+            delivery zone isn't known until checkout. The subtotal here is not
+            the final number and the design has to be honest about that without
+            frightening anyone.
+          </p>
+        </div>
+        <div class="spec-file">
+          src/components/pages/storefront/cart/index.tsx
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/checkout</span>
+          <span class="chip chip-built">Built</span>
+        </div>
+        <div class="spec-body">
+          <p>Single page, no steps. Fields, in order:</p>
+          <ul>
+            <li>Name, email, phone</li>
+            <li>
+              Delivery method — "Deliver to my address" or "Pick up in store
+              (free)"
+            </li>
+            <li>Delivery zone, a select, only when delivering</li>
+            <li>Delivery address, only when delivering</li>
+            <li>Coupon code, optional</li>
+          </ul>
+          <p>
+            A live order summary sits alongside. It is explicitly
+            <em>indicative</em> — the server recalculates every price, fee and
+            discount from the database, and a coupon's real value is only
+            confirmed at the payment step. The current copy handles this with a
+            small grey line; if you can make that clearer without adding
+            anxiety, that's a genuine improvement.
+          </p>
+          <p>
+            Guest checkout only. There is no account creation here, ever, and no
+            "save my details for next time".
+          </p>
+        </div>
+        <div class="spec-file">
+          src/components/pages/storefront/checkout/index.tsx
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">Payment</span>
+          <span class="chip chip-neutral">Paystack's UI — not ours</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Payment happens in a Paystack overlay on top of our checkout page.
+            The customer never leaves. We don't control that interface and
+            shouldn't try to — Nigerian shoppers <em>recognise</em> it, and that
+            recognition is a trust asset. Don't disguise it.
+          </p>
+          <p>
+            What you do design is the moment before (the pay button and its
+            loading state) and the moment after (the customer lands back on our
+            page). One firm rule inherited from the codebase:
+            <strong
+              >payment errors appear inline, next to the pay button — never as a
+              toast.</strong
+            >
+            A toast that a customer misses at the moment money is involved is a
+            support ticket at best.
+          </p>
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/order/[reference]</span>
+          <span class="chip chip-built">Built — read the states section</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            The confirmation page, and the most product-sensitive screen in the
+            whole storefront. It has three states and a rule about a fourth.
+            Covered below in detail — please don't design it from this summary
+            alone.
+          </p>
+        </div>
+        <div class="spec-file">
+          src/components/pages/storefront/order-confirmation/index.tsx
+        </div>
+      </div>
+
+      <div class="spec">
+        <div class="spec-head">
+          <span class="spec-route">/tenant-not-found</span>
+          <span class="chip chip-partial">Built, bare</span>
+        </div>
+        <div class="spec-body">
+          <p>
+            Shown when a hostname matches no active store — a mistyped
+            subdomain, a domain pointed at us before the store is configured, an
+            expired client. Currently two lines of centred text.
+          </p>
+          <p>
+            Small page, real decision: is this neutral, or is it a soft platform
+            surface that says who we are and links to the marketing site?
+            Someone landing here is already curious about a Nigerian online
+            store.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="brand">
+      <h2>
+        The brand-variable problem <span>The central design constraint</span>
+      </h2>
+
+      <p class="lede">
+        A tenant supplies one colour. We apply it everywhere the design says
+        "brand". We have no control over what they pick, and no design review
+        before it goes live.
+      </p>
+
+      <p>
+        This is the constraint that most changes how you'd normally work. Below
+        is the same component with five plausible tenant colours. Three are
+        fine. Two produce white text that is genuinely unreadable, and both are
+        colours a real Nigerian fashion or beauty brand would plausibly choose.
+      </p>
+
+      <div class="demo">
+        <div class="demo-head">
+          Identical markup · five tenant values · white foreground assumed
+        </div>
+        <div class="demo-grid">
+          <div class="swatch" style="--brand: #0e6b4f">
+            <div class="swatch-hex">
+              <span class="swatch-dot"></span>#0E6B4F
+            </div>
+            <div class="swatch-badge">3</div>
+            <div class="swatch-btn">Add to cart</div>
+            <div class="swatch-verdict">Fine</div>
+          </div>
+          <div class="swatch" style="--brand: #7a2e8c">
+            <div class="swatch-hex">
+              <span class="swatch-dot"></span>#7A2E8C
+            </div>
+            <div class="swatch-badge">3</div>
+            <div class="swatch-btn">Add to cart</div>
+            <div class="swatch-verdict">Fine</div>
+          </div>
+          <div class="swatch" style="--brand: #d81b60">
+            <div class="swatch-hex">
+              <span class="swatch-dot"></span>#D81B60
+            </div>
+            <div class="swatch-badge">3</div>
+            <div class="swatch-btn">Add to cart</div>
+            <div class="swatch-verdict">Borderline</div>
+          </div>
+          <div class="swatch" style="--brand: #7ce38b">
+            <div class="swatch-hex">
+              <span class="swatch-dot"></span>#7CE38B
+            </div>
+            <div class="swatch-badge">3</div>
+            <div class="swatch-btn">Add to cart</div>
+            <div class="swatch-verdict bad">Unreadable</div>
+          </div>
+          <div class="swatch" style="--brand: #f2d024">
+            <div class="swatch-hex">
+              <span class="swatch-dot"></span>#F2D024
+            </div>
+            <div class="swatch-badge">3</div>
+            <div class="swatch-btn">Add to cart</div>
+            <div class="swatch-verdict bad">Unreadable</div>
+          </div>
+        </div>
+      </div>
+
+      <p>Two design responses, and I'd like your call on both:</p>
+
+      <ol>
+        <li>
+          <strong>Compute the foreground.</strong> Rather than hard-coding white
+          text on the brand colour, derive black or white from the colour's
+          luminance so contrast always passes. Cheap to implement, removes the
+          worst failures, but means a tenant's button sometimes has black text
+          and sometimes white — the design has to look intentional either way.
+        </li>
+        <li>
+          <strong>Spend the colour sparingly.</strong> The more surface area the
+          brand colour occupies, the more a bad value can wreck. If it's an
+          accent — the cart badge, the primary button, a focus ring, an active
+          state — the store still looks composed with a terrible hex. If it's a
+          full-bleed header, one bad tenant means fifty support messages that
+          all say "my site looks broken".
+        </li>
+      </ol>
+
+      <p>
+        My strong recommendation is that the storefront's own palette does the
+        heavy lifting — a neutral, quiet, well-made ground — and the tenant
+        colour is a controlled accent on top. That reads as a professional
+        template that the brand sits inside, rather than a template desperately
+        pretending to be bespoke. Worth noting the second-order benefit too: a
+        quiet ground makes <em>product photography</em> the loudest thing on the
+        page, which is what actually sells.
+      </p>
+
+      <div class="note note-open">
+        <div class="note-label">Related, unsolved</div>
+        <p>
+          The logo has the same problem in a different shape. Fixed-height
+          rendering means a wide wordmark becomes tiny and a square avatar
+          becomes a postage stamp. Please specify a slot that handles both, plus
+          the no-logo fallback (currently the store name as plain text, which is
+          honestly fine and could be made good).
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="trust">
+      <h2>
+        Trust is the design problem
+        <span>The thing this market actually turns on</span>
+      </h2>
+
+      <p>
+        A shopper clicks a link in an Instagram bio and arrives at
+        <span class="mono">somestore.yourbrand.com</span>. They have never heard
+        of this store. Nigerian online shopping carries a real and rational
+        fraud-suspicion baseline, and that shopper is asking one question before
+        they'll consider a second:
+        <em>is this a real business or am I about to send money to nobody?</em>
+      </p>
+
+      <p>
+        Conversion here is far more a function of credibility than of
+        aesthetics. Every one of these is a design lever, not a content
+        afterthought:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Visible, human contact.</strong> Email and a WhatsApp link are
+          in the footer already. WhatsApp especially — being able to message a
+          person before paying is the difference between a real shop and a scam
+          page. Consider whether it earns a more prominent position than the
+          footer.
+        </li>
+        <li>
+          <strong>A physical address.</strong> The field exists in the data
+          model and is rendered nowhere. A Lagos street address does an enormous
+          amount of credibility work for near-zero design cost. This is the
+          cheapest win in the brief.
+        </li>
+        <li>
+          <strong>No surprise costs.</strong> Delivery fee only becomes knowable
+          at checkout, which is the classic abandonment trigger. At minimum,
+          signal earlier that delivery is charged by zone and that pickup is
+          free. If we can surface a "from ₦X" figure on the cart, better.
+        </li>
+        <li>
+          <strong>Pickup as a visible option.</strong> It reads as logistics but
+          functions as trust — "I can just go and collect it" defuses the fear
+          of paying into the void. Don't bury it behind a delivery-first
+          default.
+        </li>
+        <li>
+          <strong>A human order number.</strong> Orders carry a readable
+          per-store sequence number, not just an internal ID. Show that. "Order
+          #14" is something a customer can quote in a WhatsApp message; a random
+          string isn't.
+        </li>
+        <li>
+          <strong>Paystack, named.</strong> Shoppers recognise and trust it.
+          Saying payments are processed by Paystack borrows credibility we
+          haven't earned yet.
+        </li>
+      </ul>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="speed">
+      <h2>Speed is a design constraint <span>Not a developer concern</span></h2>
+
+      <p>
+        Page speed is written into what we sell — it's an explicit
+        differentiator against the plugin-heavy WordPress builds we're priced
+        above. The storefront has a hard target of a Lighthouse mobile score of
+        90 or better, measured on a seeded store. That's an acceptance
+        criterion, so a design that can't hit it doesn't ship.
+      </p>
+
+      <p>Practically, for your side of the work:</p>
+
+      <ul>
+        <li>No hero video, no autoplay background media on the storefront.</li>
+        <li>
+          One typeface family. Two weights if we can manage it. Every additional
+          weight is real milliseconds on a 3G connection in Lagos.
+        </li>
+        <li>
+          No carousel or animation libraries. CSS transitions are free;
+          JavaScript ones aren't.
+        </li>
+        <li>
+          An image budget per screen — tenants upload phone photos and won't
+          optimise them.
+        </li>
+        <li>
+          The catalogue and product pages are rendered on the server for search
+          indexing; the cart is browser-only. That split is fixed.
+        </li>
+      </ul>
+
+      <p>
+        This constraint is a gift, honestly. It rules out most of the ways a
+        storefront template gets bloated and pushes the design toward exactly
+        the restraint the brand-variable problem already demands.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="states">
+      <h2>States and edges <span>Where the real work is</span></h2>
+
+      <h3>The confirmation page, in detail</h3>
+
+      <p>
+        After paying, the customer lands on the order page while two things
+        race: our browser-side check with Paystack, and a webhook arriving
+        directly from Paystack to our server. Either can confirm the order. The
+        second one might land seconds later.
+      </p>
+
+      <div class="states">
+        <div class="state state-a">
+          <div class="state-name">verifying</div>
+          <div class="state-copy">
+            Default on arrival. We're checking. Short, usually under two
+            seconds.
+          </div>
+        </div>
+        <div class="state state-b">
+          <div class="state-name">paid</div>
+          <div class="state-copy">
+            Confirmed. Show the order number and total. The cart clears here.
+          </div>
+        </div>
+        <div class="state state-c">
+          <div class="state-name">pending</div>
+          <div class="state-copy">
+            We couldn't confirm yet. Copy says the order is
+            <em>being confirmed</em> — reassuring, not alarming.
+          </div>
+        </div>
+        <div class="state state-d">
+          <div class="state-name">failed</div>
+          <div class="state-copy">Does not exist and must not be designed.</div>
+        </div>
+      </div>
+
+      <div class="note note-never">
+        <div class="note-label">Never</div>
+        <p>
+          A failure to confirm is <strong>not</strong> a failed payment. The
+          webhook is the trusted path and it may not have landed yet. Telling
+          someone their payment failed when it actually succeeded is by far the
+          worse error — they will pay twice, or they'll be furious, or both. The
+          <span class="mono">pending</span> state must read as "we've got this,
+          check your email", never as "something went wrong".
+        </p>
+      </div>
+
+      <p>
+        This is the clearest example in the project of a design decision that is
+        really a product decision about money. The visual difference between a
+        reassuring pending state and an alarming one is the difference between a
+        customer who waits and a customer who disputes a charge.
+      </p>
+
+      <h3>Empty and edge states, all of which are routine</h3>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>How often</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Store with zero products</strong></td>
+              <td class="num">Every tenant, day one</td>
+              <td>
+                Not an edge case — it's the first impression of every store we
+                launch, and the client will look at it before their customers
+                do. Currently one grey sentence. Deserves better.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Product with no image</strong></td>
+              <td class="num">Common</td>
+              <td>
+                Currently renders an empty grey square. Needs a designed
+                placeholder.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Out of stock</strong></td>
+              <td class="num">Common</td>
+              <td>
+                Needed on both the grid and the product page, with add-to-cart
+                disabled.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Empty cart</strong></td>
+              <td class="num">Common</td>
+              <td>
+                Reachable directly by URL. Needs a route back to the catalogue.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Invalid or expired coupon</strong></td>
+              <td class="num">Common</td>
+              <td>
+                Validated server-side and rate-limited, because coupon codes are
+                otherwise guessable. Error appears at checkout.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Last item sold while checking out</strong></td>
+              <td class="num">Rare, high stakes</td>
+              <td>
+                The order is still marked paid and flagged internally — we never
+                drop a payment that actually happened. But the customer needs
+                telling, gently, that one item will be sorted out directly. No
+                screen exists for this yet.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Very long store or product names</strong></td>
+              <td class="num">Common</td>
+              <td>
+                Tenants write their own copy with no character limits enforced
+                in the UI.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="never">
+      <h2>What this will never have <span>So you don't design it</span></h2>
+
+      <p>
+        These aren't "later" — they're structurally absent, and designing around
+        them would create expectations we'd then have to break.
+      </p>
+
+      <ul>
+        <li>
+          <strong>Customer accounts.</strong> There is no customer record in the
+          database at all. Checkout is guest-only, forever. No sign-in on the
+          storefront, no "my orders", no wishlist, no saved addresses.
+        </li>
+        <li><strong>Multiple currencies.</strong> NGN only.</li>
+        <li>
+          <strong>Reviews, ratings, related products, recommendations.</strong>
+          None of these are in the data model.
+        </li>
+        <li>
+          <strong>Live courier tracking.</strong> Sold as a paid add-on, not
+          part of the base product. Delivery is flat-rate by zone, plus free
+          pickup.
+        </li>
+        <li>
+          <strong>Per-tenant themes or layout choices.</strong> Covered above,
+          but worth repeating because it's the one clients will ask for most.
+        </li>
+      </ul>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="decisions">
+      <h2>Decisions I need from you <span>Blocking or near-blocking</span></h2>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Question</th>
+              <th>Why it's blocking</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>How much surface does the tenant colour get?</strong>
+              </td>
+              <td>
+                Determines whether one bad hex breaks a store. Changes the
+                entire component palette.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong
+                  >Black or white text on the brand colour — computed, or
+                  fixed?</strong
+                >
+              </td>
+              <td>
+                Accessibility floor. If computed, the design must look
+                deliberate with either.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong
+                  >One typeface for all storefronts, or does the tenant get a
+                  choice?</strong
+                >
+              </td>
+              <td>
+                Strong recommendation: one. A choice multiplies load cost and
+                design risk for negligible differentiation.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Categories on the storefront — ship or defer?</strong>
+              </td>
+              <td>
+                Categories exist in the database but appear nowhere in the
+                storefront. Adding navigation changes the catalogue page's whole
+                structure.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Search on the catalogue?</strong></td>
+              <td>
+                Arguably unnecessary at thirty products; necessary the moment a
+                client uploads three hundred.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Image gallery on the product page?</strong></td>
+              <td>
+                The data supports multiple images today. Fashion and beauty
+                tenants will need it.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Does the storefront need a dark mode?</strong></td>
+              <td>
+                The library is installed. My instinct is no — it doubles the
+                brand-colour problem for little gain on a shopping surface.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong
+                  >Is "store not found" neutral or a platform surface?</strong
+                >
+              </td>
+              <td>Small page, small free marketing opportunity.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section id="state-map">
+      <h2>Current state map <span>What exists as of today</span></h2>
+
+      <p>
+        So you know what you're redesigning versus designing from nothing.
+        Everything below is functional — the checkout has been tested end to end
+        against the real payment gateway — but the visual layer is deliberately
+        minimal, waiting on this brief.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Surface</th>
+              <th>Route</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Marketing home</td>
+              <td><span class="mono">/</span></td>
+              <td><span class="chip chip-missing">Placeholder</span></td>
+            </tr>
+            <tr>
+              <td>Pricing</td>
+              <td><span class="mono">/pricing</span></td>
+              <td><span class="chip chip-missing">Not built</span></td>
+            </tr>
+            <tr>
+              <td>Sign in / Sign up</td>
+              <td>
+                <span class="mono">/sign-in</span> ·
+                <span class="mono">/sign-up</span>
+              </td>
+              <td><span class="chip chip-partial">Clerk default</span></td>
+            </tr>
+            <tr>
+              <td>Catalogue</td>
+              <td><span class="mono">/</span></td>
+              <td><span class="chip chip-partial">Minimal grid</span></td>
+            </tr>
+            <tr>
+              <td>Product detail</td>
+              <td><span class="mono">/products/[slug]</span></td>
+              <td><span class="chip chip-partial">One image</span></td>
+            </tr>
+            <tr>
+              <td>Cart</td>
+              <td><span class="mono">/cart</span></td>
+              <td><span class="chip chip-built">Built</span></td>
+            </tr>
+            <tr>
+              <td>Checkout</td>
+              <td><span class="mono">/checkout</span></td>
+              <td><span class="chip chip-built">Built</span></td>
+            </tr>
+            <tr>
+              <td>Payment overlay</td>
+              <td>—</td>
+              <td><span class="chip chip-neutral">Paystack</span></td>
+            </tr>
+            <tr>
+              <td>Order confirmation</td>
+              <td><span class="mono">/order/[reference]</span></td>
+              <td><span class="chip chip-built">Built, 3 states</span></td>
+            </tr>
+            <tr>
+              <td>Store not found</td>
+              <td><span class="mono">/tenant-not-found</span></td>
+              <td><span class="chip chip-partial">Bare</span></td>
+            </tr>
+            <tr>
+              <td>Empty-store state</td>
+              <td>—</td>
+              <td><span class="chip chip-partial">One line of text</span></td>
+            </tr>
+            <tr>
+              <td>Missing-image placeholder</td>
+              <td>—</td>
+              <td><span class="chip chip-missing">Not built</span></td>
+            </tr>
+            <tr>
+              <td>Stock-shortfall message</td>
+              <td>—</td>
+              <td><span class="chip chip-missing">Not built</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Two seeded demo stores exist and can be browsed end to end, including a
+        real test payment. If it helps to see the current state in a browser
+        rather than in screenshots, that's a five-minute setup and I'd recommend
+        it before you start — particularly the checkout-to-confirmation stretch,
+        which is hard to judge statically.
+      </p>
+    </section>
+  </main>
+
+  <div class="footer-note">
+    Written against the working build. Routes, field names and states above are
+    taken from the code as it stands, not from a plan — where something is
+    marked as not built, it genuinely doesn't exist yet, and where something is
+    marked built, you can go and look at it.
+  </div>
+</div>

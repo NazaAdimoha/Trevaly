@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "paystack": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@paystack/mcp-server",
+        "--api-key",
+        "${PAYSTACK_SECRET_KEY}"
+      ],
+      "env": {}
+    }
+  }
+}

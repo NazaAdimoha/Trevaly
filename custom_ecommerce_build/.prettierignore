@@ -1,0 +1,15 @@
+# Generated and vendored output
+.next/
+src/generated/
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# Design canvas.
+# `take-the-order.html` is a ~2 MB generated bundle (the canvas editor plus the
+# design content encoded into it) — formatting it rewrites machine-generated
+# code for no benefit and risks corrupting the payload. The `.dc.html` artboards
+# are authored for that editor, whose properties panel edits inline `style`
+# attributes; leaving them alone keeps a re-seed diffable against what the
+# editor itself writes back.
+docs/design/canvas/
+docs/design/.build/

@@ -1,0 +1,181 @@
+// ─────────────────────────────────────────────────────────────
+// Multi-tenant e-commerce schema
+// Every business (tenant) shares this database. Every table that
+// holds tenant-owned data carries a `tenantId` column + index so
+// queries stay fast and isolated as client count grows.
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING // order created, payment not yet confirmed
+  PAID // server-side verified with Paystack/Flutterwave
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  ZONE_DELIVERY
+  COURIER_API
+}
+
+// One row per business using the platform.
+// Holds branding + the payment subaccount that makes split
+// payments possible (Section 7.3 of the breakdown doc).
+model Tenant {
+  id                       String   @id @default(cuid())
+  name                     String
+  slug                     String   @unique // e.g. "adaobi-store" -> adaobi-store.yourbrand.com
+  customDomain             String?  @unique // optional: adaobistore.com
+  logoUrl                  String?
+  primaryColor             String?
+  paystackSubaccountCode   String? // ACCT_xxx — created when tenant is onboarded
+  flutterwaveSubaccountId  String?
+  platformFeePercent       Decimal  @default(0) @db.Decimal(5, 2) // e.g. 1.00 = 1% platform cut
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  products      Product[]
+  orders        Order[]
+  coupons       Coupon[]
+  deliveryZones DeliveryZone[]
+  users         TenantUser[]
+
+  @@index([slug])
+}
+
+// Admin/staff logins for a tenant's own dashboard.
+model TenantUser {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  passwordHash String
+  role         String   @default("owner") // "owner" | "staff"
+  createdAt    DateTime @default(now())
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  priceKobo   Int // money stored as integer kobo — never use Float for currency
+  stock       Int      @default(0)
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model DeliveryZone {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String // e.g. "Lagos Mainland"
+  feeKobo  Int
+  isActive Boolean @default(true)
+
+  orders Order[]
+
+  @@index([tenantId])
+}
+
+model Coupon {
+  id           String     @id @default(cuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String
+  type         CouponType
+  value        Int // percentage (0-100) OR fixed amount in kobo, per `type`
+  minOrderKobo Int?       @default(0)
+  maxUses      Int?
+  timesUsed    Int        @default(0)
+  expiresAt    DateTime?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  orders Order[]
+
+  @@unique([tenantId, code]) // codes only need to be unique per-tenant, not globally
+  @@index([tenantId])
+}
+
+model Order {
+  id       String      @id @default(cuid())
+  tenantId String
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status   OrderStatus @default(PENDING)
+
+  customerName  String
+  customerEmail String
+  customerPhone String
+
+  deliveryMethod  DeliveryMethod @default(ZONE_DELIVERY)
+  deliveryZoneId  String?
+  deliveryZone    DeliveryZone?  @relation(fields: [deliveryZoneId], references: [id])
+  deliveryAddress String?
+  deliveryFeeKobo Int            @default(0)
+
+  couponId     String?
+  coupon       Coupon? @relation(fields: [couponId], references: [id])
+  discountKobo Int     @default(0)
+
+  subtotalKobo Int
+  totalKobo    Int
+
+  // The reference you generate and pass to Paystack/Flutterwave at
+  // checkout. Unique so a webhook can never double-apply a payment.
+  paymentReference  String    @unique
+  paymentVerifiedAt DateTime?
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([paymentReference])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity      Int
+  unitPriceKobo Int // snapshot of the price at purchase time —
+  // never re-read live product price for a historic order,
+  // or a later price change silently rewrites past receipts.
+
+  @@index([orderId])
+  @@index([productId])
+}

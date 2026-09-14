@@ -1,0 +1,90 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Home — desktop",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 5600
+    },
+    {
+      "file": "HomeMobile.dc.html",
+      "title": "Home — mobile (the real view)",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 4100
+    },
+    {
+      "file": "Pricing.dc.html",
+      "title": "Pricing — one price (Model A)",
+      "x": 0,
+      "y": 5720,
+      "w": 1440,
+      "h": 2750
+    },
+    {
+      "file": "PricingShare.dc.html",
+      "title": "Pricing — the screenshot asset",
+      "x": 1560,
+      "y": 5720,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PricingTiers.dc.html",
+      "title": "Pricing — plans (Model B)",
+      "x": 0,
+      "y": 8590,
+      "w": 1440,
+      "h": 1800
+    },
+    {
+      "file": "SignIn.dc.html",
+      "title": "Sign in — the frame around Clerk",
+      "x": 0,
+      "y": 10510,
+      "w": 1440,
+      "h": 900
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-placeholders",
+      "x": -340,
+      "y": 0,
+      "w": 300,
+      "text": "PLACEHOLDERS — nothing here is invented.\n\nThe brand has no name yet, so the wordmark reads [BRAND] and is a tweak chip: type your real name and it updates the nav, the footer and the copyright at once.\n\nSame for [YOUR WHATSAPP NUMBER], [YOUR EMAIL], [YOUR LAGOS ADDRESS] and [ADD-ON PRICE]. The Lagos address is worth filling — the brief calls a physical address the cheapest credibility win available.\n\nProduct images are drawn placeholders. Swap them for real photos from a seeded demo store before this goes near a customer; nothing sells a garment like the garment."
+    },
+    {
+      "id": "note-seo",
+      "x": -340,
+      "y": 340,
+      "w": 300,
+      "text": "SEO, baked in rather than bolted on.\n\nOne h1 per page, h2 per section, h3 per FAQ answer. No headline is an image. Every SVG carries a label or is marked decorative.\n\nCopy targets what a seller actually types into Google — 'how much does an online store cost in Nigeria', 'sell online with Paystack', 'online store for my business Lagos' — rather than the words we would use internally.\n\nThe FAQ block is the highest-value SEO section on the page: six real questions, answers visible in the DOM (no accordion hiding them), ready for FAQPage structured data.\n\nThe head tags, JSON-LD, sitemap and OG image work is written up in docs/design/SEO-PLAN.md."
+    },
+    {
+      "id": "note-share",
+      "x": 2010,
+      "y": 5720,
+      "w": 300,
+      "text": "THE SCREENSHOT ASSET.\n\nThe brief says the distribution mechanic is someone screenshotting a page and forwarding it on WhatsApp. This is the screen designed for that: one phone frame, nothing scrolls, and the domain appears twice — once at the top, once beside the button — so a screenshot with no surrounding context still says where to go.\n\nDark ground on purpose: it survives being posted into a light or dark chat thread without dissolving.\n\nExport it as PNG and it is ready to send."
+    },
+    {
+      "id": "note-models",
+      "x": -340,
+      "y": 8590,
+      "w": 300,
+      "text": "TWO PRICING MODELS. Pick one; do not ship both.\n\nModel A (above, 'Pricing — one price') is the package as the pricing doc settled it: one prominent figure, inclusions, add-ons, and the brochure-site comparison that justifies the number.\n\nModel B (this one) is subscription-first: a free tier that pays us a share of sales, and paid plans that take 0%. It converts a build-fee treadmill into recurring revenue and its free tier removes the price objection entirely at the top of the funnel.\n\nEvery figure on both boards is a tweak chip. They are sample numbers, not a recommendation about your price — type your own and see which layout still reads well.\n\nModel B needs schema and billing work that does not exist yet. Model A can ship on what is already built."
+    },
+    {
+      "id": "note-clerk",
+      "x": -340,
+      "y": 10510,
+      "w": 300,
+      "text": "CLERK — tokens, not a pixel comp.\n\nWe do not own the markup inside the card, so treat everything in it as a spec for Clerk's appearance API rather than something to hand-build.\n\nvariables: colorPrimary #4DBF7D, colorText #0F2518, colorTextSecondary #7C8083, colorBackground #FFFFFF, colorInputBackground #FFFFFF, colorDanger #D42620, colorSuccess #04802E, borderRadius 4px, fontFamily the body face, fontSize 15.5px.\n\nelements: card -> shadow-none border-0 p-0 bg-transparent (our own card wraps it); header and footer -> hidden (we render the title and the 'New here?' line); formButtonPrimary -> h-12 rounded bg-primary hover:bg-primary-600 shadow-btn normal-case; formFieldInput -> h-[46px] rounded border-grey-100 focus:border-primary; socialButtonsBlockButton -> h-[46px] rounded border-grey-100.\n\nThe left panel gradient is the app's own --background-image-sidebar, unchanged.\n\nOne real note from the build: Clerk's bot protection blocks automated sign-up, so this screen has never been driven end to end. Worth a manual pass once styled."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}
