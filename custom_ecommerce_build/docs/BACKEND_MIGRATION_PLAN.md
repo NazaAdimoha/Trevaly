@@ -22,9 +22,11 @@ tenant, or a mobile build that stops parsing.
 | What does Next.js keep? | Rendering, `proxy.ts` hostname routing, Clerk session UI, SEO. **No database URL, no Paystack or Cloudinary secret.** |
 | Rough size | ~5–6 engineer-weeks, in seven phases. |
 
-**One blocker before any of it:** neither `custom_ecommerce_build/` nor the
-workspace root is a git repository. A migration that deletes route handlers as
-it goes needs history and a revert button. Phase 0 starts there.
+**Git — done 2026-09-14.** The workspace root is now a repository with a
+baseline commit (`461ec2b`) and remote `github.com/NazaAdimoha/Trevaly`
+(public). The push is waiting on the owner authenticating as `NazaAdimoha`; the
+SSH key and saved HTTPS login on the development machine belong to other GitHub
+accounts. Follow-up fixes are on `fix/audit-followups`.
 
 ---
 
@@ -60,19 +62,21 @@ Around it:
 
 ### Inventory — every piece of server logic that has to move
 
-36 HTTP operations across 23 API route files, 19 Server Components and route
+37 HTTP operations across 24 API route files, 20 Server Components and route
 handlers that query the database directly, and one database lookup inside
-`proxy.ts`.
+`proxy.ts`. (36 / 23 / 19 when this plan was written. The additions are
+`GET /api/platform/webhook-events` and its page, whose only database read is the
+`requirePlatformAdmin` role check.)
 
 #### A. The money path (highest blast radius)
 
 | Operation | Auth | What it does | Called by |
 | --- | --- | --- | --- |
-| `POST /api/checkout` | Public; tenant from `x-tenant-slug` set by proxy | Re-prices every line from the DB, including variants. Validates the delivery zone and coupon. Increments `orderSequence` and creates the order in one transaction. Snapshots the platform fee. Calls Paystack initialize, and cancels the order if that fails. Rate limit: 8/min per IP per tenant. | Storefront checkout |
+| `POST /api/checkout` | Public; tenant from `x-tenant-slug` set by proxy | Re-prices every line from the DB, including variants. Validates the delivery zone and coupon; a rejected coupon gets the one uniform `COUPON_NOT_APPLICABLE` message whatever the reason. Increments `orderSequence` and creates the order in one transaction. Snapshots the platform fee. Calls Paystack initialize, and cancels the order if that fails. Rate limit: 8/min per IP per tenant. | Storefront checkout |
 | `POST /api/payments/verify` | Public, reference only | `verifyAndFulfillOrder()`; 202 when not yet verifiable | Order confirmation page |
 | `POST /api/webhooks/paystack` | HMAC-SHA512 over the **raw** body | Persists a `WebhookEvent` first (upsert on provider + event id). Handles `charge.success`, `charge.failed`, `refund.processed`, `charge.dispute.create` and `charge.dispute.resolve`. Returns **500 on failure** so Paystack retries. | Paystack |
 | `GET /api/cron/expire-orders` | `CRON_SECRET` bearer | Cancels PENDING orders more than 24h old with no `paymentVerifiedAt` | Vercel Cron, daily 03:00 |
-| `POST /api/coupons/preview` | Public; 10/min | Uniform valid/invalid answer | **No caller found** in web or mobile |
+| `POST /api/coupons/preview` | Public; 10/min | Uniform valid/invalid answer via `publicCouponRejection` (core) — the same function checkout uses | Storefront checkout — the coupon field's **Apply** button |
 
 #### B. Store admin — every call goes through `authorizeStore(slug)`
 
@@ -94,8 +98,9 @@ handlers that query the database directly, and one database lookup inside
 | --- | --- | --- | --- |
 | `GET /api/app/config` | Public | Minimum-version gate and feature flags; `Cache-Control: public, max-age=60, s-maxage=300` | Mobile |
 | `GET /api/me/stores` | Signed in | Memberships with `storefrontUrl` and `logoUrl` | Mobile |
-| `GET /api/platform/banks` | SUPER_ADMIN | Paystack bank list, de-duplicated by code | **No caller** (the onboarding page loads banks server-side) |
-| `GET /api/platform/tenants` | SUPER_ADMIN | Tenant estate | **No caller** (the platform page reads the DB directly) |
+| `GET /api/platform/banks` | SUPER_ADMIN | Paystack bank list, de-duplicated by code; `Cache-Control: private, max-age=3600` | Onboarding form (client fetch) |
+| `GET /api/platform/tenants` | SUPER_ADMIN | Tenant estate, with `storefrontUrl` resolved by `tenantOrigin` | Tenants list at `/dashboard/platform/tenants` |
+| `GET /api/platform/webhook-events` | SUPER_ADMIN | Webhook deliveries with per-status counts. **Never returns `payload`** (shopper email, card metadata). | Webhook events page |
 | `POST /api/platform/tenants` | SUPER_ADMIN | Resolve account (a 429 is tolerated) → create subaccount → **only then** write the Tenant | Onboarding form |
 
 #### D. Database reads outside `/api` — the part that is easy to miss
@@ -106,15 +111,16 @@ handlers that query the database directly, and one database lookup inside
 | `app/sites/_tenant.ts` | Public tenant by slug, wrapped in React `cache()` |
 | Storefront layout, home, category, product, checkout, order confirmation, `sitemap.xml`, `robots.txt` | Tenant, categories, products + variants (first 60), delivery zones, order by reference, sitemap slugs |
 | Dashboard layout | The signed-in user's `PlatformUser` role |
-| Dashboard home, platform estate, onboarding | `listMyStores`, every tenant, `listBanks` |
+| Dashboard home | `listMyStores` |
+| Platform tenants, webhook events, onboarding pages | `requirePlatformAdmin` role check only — the tenant list and bank list now come from the API |
 | Store layout and the overview, product detail, product edit, settings, coupons and delivery-zones pages | `requireTenantMember`, `getStoreOverview`, product by id, `tenantOrigin` |
 
 #### Who calls what
 
 | Client | Transport today | Endpoints |
 | --- | --- | --- |
-| Web dashboard (client views) | Same-origin axios + Clerk cookie | Products, import, categories, coupons, delivery zones, settings, upload signature, platform tenants POST |
-| Storefront browser | Same-origin axios, tenant from hostname | `checkout`, `payments/verify` |
+| Web dashboard (client views) | Same-origin axios + Clerk cookie | Products, import, categories, coupons, delivery zones, orders list/detail/PATCH, settings, upload signature, platform tenants GET/POST, platform banks, platform webhook events |
+| Storefront browser | Same-origin axios, tenant from hostname | `checkout`, `payments/verify`, `coupons/preview` |
 | Mobile app | `Authorization: Bearer <Clerk token>` + `X-App-Version` | `app/config`, `me/stores`, `overview`, `orders` list/detail/PATCH, `products` list/POST, `settings` GET/PATCH, `uploads/signature` |
 | Paystack | Signed POST | `webhooks/paystack` |
 | Vercel Cron | Bearer `CRON_SECRET` | `cron/expire-orders` |
@@ -524,8 +530,8 @@ hostname-derived slug placed in the path.
 
 ### Phase 0 — Safety net · ~3 days
 
-1. **Put the workspace under git.** Commit the current state as the baseline
-   everything is diffed against.
+1. ~~**Put the workspace under git.**~~ **Done 2026-09-14** — baseline
+   `461ec2b`; push pending owner authentication.
 2. **Create a Neon `staging` branch** and point a staging deploy of the current
    web app at it.
 3. **Build the contract parity suite** (Part 6.1) and run it green against the
@@ -590,8 +596,9 @@ every form.
 
 Ordered so that each step can be rolled back independently.
 
-1. **Coupon preview.** Port it (it has no caller yet), and move coupon
-   evaluation into one `promotions` service shared with checkout.
+1. **Coupon preview.** Port it (the checkout Apply button calls it now), and
+   move coupon evaluation into one `promotions` service shared with checkout.
+   Keep `publicCouponRejection` as the only thing either returns to a shopper.
 2. **Checkout and verify.** `proxy.ts` rewrites `/api/checkout` to
    `${API_ORIGIN}/api/storefront/{slug}/checkout` and `/api/payments/verify` to
    Nest. Before the flip, confirm the real client IP reaches Nest through a
@@ -753,33 +760,92 @@ becomes straightforward once Nest exists:
 
 ## Part 9 — Noticed while reading (not blockers)
 
-- **The dashboard sidebar links to a page that does not exist.**
-  `storeMenu` links to `/dashboard/stores/:slug/orders`, but there is no orders
-  page under `app/(platform)`, so the link 404s. Orders are only manageable
-  from the mobile app today.
-- **`invalidateDomain` in settings PATCH does not do what its comment says.**
-  The domain cache maps hostname → slug only, so a name or logo change never
-  needed invalidating. On serverless it also clears just one instance.
-- **Checkout is a coupon oracle.** Preview deliberately returns one uniform
-  answer, but checkout returns "expired", "fully used" and "Coupon not found"
-  separately. It is rate limited (8/min), so this is low severity, but it is
-  the exact distinction preview was designed to hide.
-- **Three endpoints have no caller**: `coupons/preview`, `platform/banks` and
-  `GET platform/tenants`. Port them for completeness, and test them less
-  heavily than live paths.
-- **Duplicate coupon update schemas**, as noted in Phase 1.
+Status as of 2026-09-14. Fixes are on branch `fix/audit-followups`.
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 1 | **Store sidebar → Orders 404'd.** No orders page existed under `app/(platform)`, so orders were manageable only from the phone. | **Fixed.** `/dashboard/stores/:slug/orders` and `/orders/:id` — search, status and needs-attention filters, pagination, status changes from `nextStatuses`, internal note, and the dispute / refund / stock-issue / failed-payment banners. Status dialogs state what the change does *not* do (no transition moves money). |
+| 2 | **Operator sidebar — both links 404'd** (Tenants, Webhook Events). Not in the original list; found while fixing #1. | **Fixed.** Tenants list moved to `/dashboard/platform/tenants` (where the sidebar pointed; `/dashboard/platform` redirects). New `/dashboard/platform/webhook-events` over a new `GET /api/platform/webhook-events`. `navigation.test.ts` now fails if any sidebar link has no page. |
+| 3 | **Three endpoints had no caller.** | **Fixed by giving them callers**, not by deleting them — the end state of this plan is a Next.js with no database URL and no Paystack secret, so these are the copies that survive. `coupons/preview` → checkout's Apply button (shoppers now see the discount before Paystack opens). `platform/tenants` GET → tenants list (it duplicated the page's server query exactly). `platform/banks` → onboarding form, fetched client-side; the page no longer calls Paystack. |
+| 4 | **Checkout was a coupon oracle.** | **Fixed.** `publicCouponRejection` + `COUPON_NOT_APPLICABLE` in `packages/core/src/validation/coupon.ts`, used by both checkout and preview. "Below minimum" is uniform too — otherwise a one-item cart enumerates live codes. Verified against the running app: five failure kinds (nonexistent, expired, used up, inactive, below minimum) → one identical response from each endpoint. |
+| 5 | **`invalidateDomain` in settings PATCH did nothing useful.** | **Removed**, with a comment saying why. The domain cache holds hostname → slug only; the route cannot change either; the storefront reads the tenant through per-request React `cache`, so name and logo changes are live on the next request. If the route ever changes `slug` or `customDomain`, invalidation belongs there — and needs Redis to reach every instance. |
+| 6 | **Money displayed 100× too small** on delivery areas (₦1,500 fee shown as ₦15.00) and coupons (₦500 off shown as ₦5.00). `formatCurrency` takes kobo; both pages divided by 100 first. Stored values were correct. Found while wiring the checkout discount. | **Fixed.** `money-usage.test.ts` fails on any `formatCurrency(... / 100)`, and was checked against the baseline commit to confirm it catches both. |
+| 7 | **A payment that lands on a cancelled order is silently dropped.** `verifyAndFulfillOrder` returns early for any order that is not PENDING. Paystack still captures and settles the money; we record no `paidAmountKobo`, no flag. Reachable when a merchant cancels a PENDING order, or when `expireStaleOrders` cancels one after 24 h and a slow bank transfer confirms later. | **Open — needs a product decision:** revive the order (CANCELLED → PAID and fulfil) or keep it cancelled, record the payment and raise a needs-attention flag. Until then the cancel dialog warns merchants, and the sweep is not live (`CRON_SECRET` unset). The nightly reconciliation in Part 11 would catch it either way. This touches `verify-order.ts`, so it lands before the Phase 0 freeze or in both codebases. |
+| 8 | **Duplicate coupon update schemas**, as noted in Phase 1. | Open — Phase 1. |
 
 ---
 
 ## Part 10 — Decisions for you
 
+Answered by the owner on 2026-09-14: "yes to all the decisions".
+
 1. **Nest host** in us-east-1: whichever of Railway, Render, Fly or AWS
    ECS/App Runner the team will actually operate. The requirements are in 3.3.
+   **Still open** — "yes" does not pick one of the four. Needed before Phase 1
+   deploys to staging.
 2. **Neon plan upgrade**, autoscaling and no scale-to-zero, before Phase 4.
-   *Recommend: yes.*
+   **Approved.**
 3. **Redis provider**: Upstash, or the host's managed Redis.
-   *Recommend: whichever is in-region with the API.*
+   **Approved: whichever is in-region with the API** — so it follows decision 1.
 4. **Storefront transport**: a same-origin proxy rewrite, or direct CORS.
-   *Recommend: the rewrite* (Part 2).
+   **Approved: the rewrite** (Part 2).
 5. **First mobile store build targets the API host directly.**
-   *Recommend: yes*, so no legacy web-host builds exist to support.
+   **Approved.**
+6. **New — late payment on a cancelled order** (Part 9 #7): revive, or record
+   and flag?
+
+---
+
+## Part 11 — Applying `BACKEND_OPTIMIZATIONS.md`
+
+The workspace-root folder `BACKEND_OPTIMIZATIONS.md/` holds chapter notes on
+rate limiting, payment systems, scaling, notifications, digital wallets and
+maps. (Their `./images/*.png` references point at files that are not in the
+folder.) What each means for this plan, stated against what the code does today:
+
+### Rate limiter
+
+| Practice | Here today | Action |
+| --- | --- | --- |
+| Centralised counter store (Redis) | Per-process `Map`. On serverless the effective limit is the configured limit × warm instances, and it resets on cold start. | **Phase 1:** move `lib/rate-limit` to Redis before running two Nest instances. |
+| Sliding-window counter | Fixed-window style `Map` | Implement the sliding-window counter atomically (Lua or `INCR` + `EXPIRE` in one `MULTI`). |
+| Tell clients when to retry | `Retry-After` on 429 already | Add `X-RateLimit-Remaining`. |
+| Key on the real client | IP + tenant | The `x-client-ip` stamping in Phase 4 step 2, or every shopper behind the rewrite shares one bucket. |
+| Monitor | Nothing | Count 429s per route; alert on spikes on checkout and preview. |
+
+### Payment system
+
+| Practice | Here today | Action |
+| --- | --- | --- |
+| Exactly-once via unique constraints | **Yes.** `WebhookEvent` upsert on (provider, event id), unique `PlatformEarning.orderId`, conditional PENDING → PAID claim. | Port unchanged (Phase 4). |
+| Idempotency key on the pay-in request | **No.** A double submit or a refresh creates a second PENDING order and Paystack transaction. | Add `Idempotency-Key` to `POST /checkout` in the Nest port, stored with a unique constraint. |
+| Retry queue + dead-letter queue | Paystack retries on our 500; FAILED rows are kept. **Now visible** at `/dashboard/platform/webhook-events`. | **Phase 4:** an operator *replay* action on a FAILED event (safe because fulfilment is idempotent). |
+| Nightly reconciliation against the PSP | **None.** | **New, Phase 4 exit:** compare Paystack transactions and settlements with Orders and PlatformEarnings; flag mismatches. It is the backstop for Part 9 #7 and for any webhook that never arrived. |
+| Handle slow payments with a pending state | Yes — the confirmation page's `pending` state. | Keep. Note the 24 h sweep assumes transfers confirm within a day; reconciliation should check before cancelling. |
+| Double-entry ledger | Not needed. We never hold funds; Paystack splits at settlement. | None — see Digital wallet. |
+
+### Scaling
+
+| Practice | Here today | Action |
+| --- | --- | --- |
+| Stateless web tier | The rate limiter and the domain LRU are per-instance memory. | Both into Redis before horizontal scaling (Phase 1–2). This is also why settings PATCH can never invalidate the domain cache correctly from one instance. |
+| Cache with expiry and a consistency plan | Domain cache: 5 min positive, 30 s negative, failures never cached. | Keep the TTLs in Redis; invalidate on domain attach/detach. |
+| CDN for static assets | Cloudinary delivers every image. | None. |
+| Database replication | Single Neon primary. | After Phase 5, consider a Neon read replica for storefront reads. |
+
+### Notification system — for MOBILE_PLAN Phase 4 (push)
+
+| Practice | Action |
+| --- | --- |
+| Deduplicate | Notification log keyed on (order id, event type), so a webhook redelivery never notifies twice. |
+| Retry with backoff; keep failures | Queue sends; record provider errors; drop dead device tokens. |
+| Respect the user | Per-merchant opt-out and quiet hours. |
+| Send outside the money transaction | Already required by MOBILE_PLAN; never inside the fulfilment transaction. |
+
+### Not applicable, deliberately
+
+- **Digital wallet** (event sourcing, TC/C, sagas): the platform holds no
+  balance. Adopting a wallet would contradict the architecture and the
+  marketing site's central promise.
+- **Maps**: delivery zones are named areas with flat fees. Geocoding an address
+  to suggest a zone is a possible later feature, not part of this migration.

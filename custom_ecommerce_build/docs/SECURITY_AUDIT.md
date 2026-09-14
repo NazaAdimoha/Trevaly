@@ -141,6 +141,27 @@ This protects the checkout, coupon preview, CSV import and upload signing.
 Flagged rather than papered over, because a limiter that looks present but does
 not hold is worse than a known gap.
 
+### 9. Checkout was a coupon enumeration oracle — MEDIUM, FIXED
+
+Found during the backend migration review (2026-09-14). `/api/coupons/preview`
+answered every invalid code identically, by design — but `/api/checkout`
+returned the precise reason: "Coupon not found", "This coupon has expired",
+"This coupon has been fully used", "below this coupon's minimum". Checkout's
+8/min limit only slowed enumeration down (and the limiter is per-instance —
+finding 8).
+
+**Fix:** `publicCouponRejection` and `COUPON_NOT_APPLICABLE` in
+`packages/core/src/validation/coupon.ts`, now the only thing either endpoint
+returns to a shopper. "Below minimum" is uniform too: it proves the code exists,
+so a one-item cart would otherwise enumerate every live code.
+
+Verified against the running app with four temporary coupons (removed after):
+
+| Code state | Checkout | Preview |
+|---|---|---|
+| does not exist, expired, used up, inactive, below minimum | identical `400` | identical `200 {"valid":false}` |
+| valid (`WELCOME10`) | — | `200`, discount quoted |
+
 ## Deliberately not changed
 
 - **Cloudinary public IDs are unguessable but public.** Product images are meant
