@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computeDiscountKobo,
+  COUPON_NOT_APPLICABLE,
   couponRejectionReason,
+  publicCouponRejection,
 } from '@core/validation/coupon';
 
 import { CouponType } from '@/generated/prisma/client';
@@ -121,5 +123,56 @@ describe('couponRejectionReason', () => {
     expect(
       couponRejectionReason({ ...base, minOrderKobo: 500_000 }, 500_000),
     ).toBeNull();
+  });
+});
+
+/**
+ * The anti-enumeration property itself. Every way a coupon can fail must look
+ * identical to a shopper — if any one of these differs, the rate limit merely
+ * slows an attacker down instead of blinding them.
+ */
+describe('publicCouponRejection', () => {
+  const base = {
+    isActive: true,
+    expiresAt: null,
+    maxUses: null,
+    timesUsed: 0,
+    minOrderKobo: 0,
+  };
+  const PAST = new Date(Date.now() - 60_000);
+
+  const failures = {
+    'does not exist': null,
+    'is inactive': { ...base, isActive: false },
+    'has expired': { ...base, expiresAt: PAST },
+    'is fully used': { ...base, maxUses: 5, timesUsed: 5 },
+    // Included deliberately: "below minimum" proves the code exists, so a
+    // one-item cart would otherwise enumerate every live code.
+    'is below the minimum': { ...base, minOrderKobo: 500_000 },
+  } as const;
+
+  it.each(Object.entries(failures))(
+    'a code that %s gets the uniform message',
+    (_label, coupon) => {
+      expect(publicCouponRejection(coupon, 100_000)).toBe(COUPON_NOT_APPLICABLE);
+    },
+  );
+
+  it('produces one distinct answer across every failure', () => {
+    const answers = new Set(
+      Object.values(failures).map((c) => publicCouponRejection(c, 100_000)),
+    );
+    expect(answers.size).toBe(1);
+  });
+
+  it('never leaks the internal reason', () => {
+    for (const coupon of Object.values(failures)) {
+      const internal = couponRejectionReason(coupon, 100_000);
+      expect(publicCouponRejection(coupon, 100_000)).not.toBe(internal);
+    }
+  });
+
+  it('lets a valid coupon through', () => {
+    expect(publicCouponRejection(base, 100_000)).toBeNull();
   });
 });

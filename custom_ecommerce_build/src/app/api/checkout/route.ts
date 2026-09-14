@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { checkoutSchema, mergeCartItems } from '@core/validation/checkout';
 import {
   computeDiscountKobo,
-  couponRejectionReason,
+  publicCouponRejection,
 } from '@core/validation/coupon';
 import { hasVariants, variantLabel, variantPriceKobo } from '@core/variants';
 
@@ -186,7 +186,10 @@ export async function POST(req: NextRequest) {
       where: { code: body.couponCode.toUpperCase() },
     });
 
-    const rejection = couponRejectionReason(coupon, subtotalKobo);
+    // Uniform on purpose. This used to return the precise reason — "expired",
+    // "fully used", "Coupon not found" — which made checkout the exact oracle
+    // `/api/coupons/preview` was designed not to be. See COUPON_NOT_APPLICABLE.
+    const rejection = publicCouponRejection(coupon, subtotalKobo);
     if (rejection || !coupon) {
       return NextResponse.json({ error: rejection }, { status: 400 });
     }

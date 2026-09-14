@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { couponPreviewSchema } from '@core/validation/checkout';
 import {
   computeDiscountKobo,
-  couponRejectionReason,
+  publicCouponRejection,
 } from '@core/validation/coupon';
 
 // eslint-disable-next-line no-restricted-imports -- resolves the tenant itself; the coupon lookup below is scoped
@@ -66,12 +66,13 @@ export async function POST(req: NextRequest) {
     where: { code: code.toUpperCase() },
   });
 
-  const rejection = couponRejectionReason(coupon, subtotalKobo);
+  const rejection = publicCouponRejection(coupon, subtotalKobo);
   if (rejection || !coupon) {
     // Deliberately uniform: never distinguish "no such code" from "expired", or
-    // the rate limit only slows enumeration down rather than blinding it.
+    // the rate limit only slows enumeration down rather than blinding it. The
+    // message comes from core so checkout says exactly the same thing.
     return NextResponse.json(
-      { valid: false, error: 'This coupon cannot be applied to your order' },
+      { valid: false, error: rejection },
       { status: 200 },
     );
   }

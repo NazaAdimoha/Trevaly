@@ -1,5 +1,6 @@
 'use client';
 
+import { isAxiosError } from 'axios';
 import { Form, Formik, type FormikHelpers, useFormikContext } from 'formik';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -25,14 +26,39 @@ import {
 
 type Zone = { id: string; name: string; feeKobo: number };
 
+/** A coupon the server has quoted for this cart. Indicative, like the summary. */
+type AppliedCoupon = { code: string; discountKobo: number };
+
+const normalizeCode = (code: string) => code.trim().toUpperCase();
+
+/**
+ * The quote only counts while the field still holds the code it was issued
+ * for. Derived rather than cleared in an effect: editing the field is enough to
+ * withdraw the discount, with no moment where a stale one is still displayed.
+ */
+function activeCoupon(
+  applied: AppliedCoupon | null,
+  fieldValue: string,
+): AppliedCoupon | null {
+  return applied && applied.code === normalizeCode(fieldValue) ? applied : null;
+}
+
 const DELIVERY_OPTIONS = [
   { label: 'Deliver to my address', value: DeliveryMethod.ZONE_DELIVERY },
   { label: 'Pick up in store (free)', value: DeliveryMethod.PICKUP },
 ];
 
 /** Live order summary. Indicative only — the server re-prices everything. */
-function OrderSummary({ zones }: { zones: Zone[] }) {
+function OrderSummary({
+  zones,
+  applied,
+}: {
+  zones: Zone[];
+  applied: AppliedCoupon | null;
+}) {
   const { values } = useFormikContext<ICheckoutFormValues>();
+  const coupon = activeCoupon(applied, values.couponCode);
+  const discountKobo = coupon?.discountKobo ?? 0;
   const items = useCart((s) => s.items);
 
   const subtotalKobo = items.reduce(
@@ -64,16 +90,122 @@ function OrderSummary({ zones }: { zones: Zone[] }) {
                 : '—'}
           </dd>
         </div>
+        {coupon ? (
+          <div className='flex justify-between text-green-700'>
+            <dt>Discount ({coupon.code})</dt>
+            <dd>−{formatCurrency(discountKobo)}</dd>
+          </div>
+        ) : null}
         <div className='flex justify-between border-t pt-2 font-medium'>
           <dt>Total</dt>
-          <dd>{formatCurrency(subtotalKobo + deliveryFeeKobo)}</dd>
+          <dd>
+            {formatCurrency(
+              Math.max(0, subtotalKobo - discountKobo) + deliveryFeeKobo,
+            )}
+          </dd>
         </div>
       </dl>
-      {values.couponCode ? (
+      {values.couponCode && !coupon ? (
         <p className='mt-3 text-xs text-gray-500'>
-          Any discount is applied and confirmed on the payment step.
+          Apply your code to see the discount before you pay.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Coupon entry with a real quote.
+ *
+ * `/api/coupons/preview` existed from the start but nothing called it, so a
+ * shopper found out what their code was worth only after the Paystack overlay
+ * had opened — the worst moment to be surprised by a total. This is its caller.
+ *
+ * Still indicative: `/api/checkout` recomputes the discount from the database
+ * and ignores anything decided here. A shopper who never presses Apply is
+ * checked there instead, with the same uniform message.
+ */
+function CouponField({
+  subtotalKobo,
+  applied,
+  onApplied,
+}: {
+  subtotalKobo: number;
+  applied: AppliedCoupon | null;
+  onApplied: (coupon: AppliedCoupon | null) => void;
+}) {
+  const { values } = useFormikContext<ICheckoutFormValues>();
+  const [checking, setChecking] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const code = normalizeCode(values.couponCode);
+  const current = activeCoupon(applied, values.couponCode);
+
+  const apply = async () => {
+    if (!code || checking) return;
+    setChecking(true);
+    setMessage(null);
+    try {
+      const { data } = await api.post<
+        | { valid: true; code: string; discountKobo: number }
+        | { valid: false; error: string }
+      >('/coupons/preview', { code, subtotalKobo });
+
+      if (data.valid) {
+        onApplied({ code: data.code, discountKobo: data.discountKobo });
+      } else {
+        onApplied(null);
+        // The server's wording, verbatim — it is deliberately the same for
+        // every kind of failure, and paraphrasing it here could undo that.
+        setMessage(data.error);
+      }
+    } catch (err) {
+      onApplied(null);
+      setMessage(
+        isAxiosError(err) && err.response?.status === 429
+          ? 'Too many attempts. Please wait a moment and try again.'
+          : 'We could not check that code just now. It will still be checked when you pay.',
+      );
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div>
+      <InputField
+        name='couponCode'
+        label='Coupon code'
+        placeholder='Optional'
+        autoCapitalize='characters'
+        onKeyDown={(e) => {
+          // Enter applies the code rather than submitting the whole checkout
+          // and opening a payment the shopper did not ask for yet.
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            void apply();
+          }
+        }}
+      />
+      <div className='mt-2 flex flex-wrap items-center gap-3'>
+        <button
+          type='button'
+          onClick={() => void apply()}
+          disabled={!code || checking || current !== null}
+          className='rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50'
+        >
+          {checking ? 'Checking…' : current ? 'Applied' : 'Apply'}
+        </button>
+        {current ? (
+          <span className='text-sm text-green-700' role='status'>
+            {formatCurrency(current.discountKobo)} off
+          </span>
+        ) : message ? (
+          <span className='text-sm text-red-700' role='alert'>
+            {message}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -83,6 +215,14 @@ export default function CheckoutView({ zones }: { zones: Zone[] }) {
   const clearCart = useCart((s) => s.clear);
   const router = useRouter();
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null,
+  );
+
+  const subtotalKobo = items.reduce(
+    (total, item) => total + item.unitPriceKobo * item.quantity,
+    0,
+  );
 
   if (items.length === 0) {
     return (
@@ -216,15 +356,15 @@ export default function CheckoutView({ zones }: { zones: Zone[] }) {
                 </>
               ) : null}
 
-              <InputField
-                name='couponCode'
-                label='Coupon code'
-                placeholder='Optional'
+              <CouponField
+                subtotalKobo={subtotalKobo}
+                applied={appliedCoupon}
+                onApplied={setAppliedCoupon}
               />
             </div>
 
             <div className='space-y-4'>
-              <OrderSummary zones={zones} />
+              <OrderSummary zones={zones} applied={appliedCoupon} />
 
               {paymentError ? (
                 <p
