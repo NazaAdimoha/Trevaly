@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { authorizePlatform, handleApiRoute } from '@/lib/auth-api';
+import { tenantOrigin } from '@/lib/domains/canonical';
 import {
   createSubaccount,
   PaystackError,
@@ -25,6 +26,7 @@ export async function GET() {
         slug: true,
         status: true,
         customDomain: true,
+        customDomainVerified: true,
         paystackSubaccountCode: true,
         platformFeePercent: true,
         createdAt: true,
@@ -32,7 +34,21 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ tenants });
+    return NextResponse.json({
+      tenants: tenants.map(
+        ({ customDomainVerified, ...tenant }) => ({
+          ...tenant,
+          // Resolved here, not in the browser: the list used to print
+          // `${slug}.yourbrand.com` — a hardcoded placeholder root domain — which
+          // is wrong on every real deployment.
+          storefrontUrl: tenantOrigin({
+            slug: tenant.slug,
+            customDomain: tenant.customDomain,
+            customDomainVerified,
+          }),
+        }),
+      ),
+    });
   });
 }
 

@@ -4,8 +4,9 @@ import { Form, Formik, type FormikHelpers, useFormikContext } from 'formik';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import useSWR from 'swr';
 
-import { api, extractErrorMessage } from '@/lib/api';
+import { api, apiFetcher, extractErrorMessage } from '@/lib/api';
 import { slugifyTenantName } from '@/lib/validation/tenant';
 
 import Button from '@/components/buttons/Button';
@@ -57,8 +58,25 @@ function StorefrontPreview() {
   );
 }
 
-export default function OnboardTenantView({ banks }: { banks: Bank[] }) {
+/**
+ * Onboard a store.
+ *
+ * Banks come from `GET /api/platform/banks`, fetched here. That endpoint had no
+ * caller: the page used to call `listBanks()` on the server so the select was
+ * filled on first paint. That was a reasonable call, deliberately reversed —
+ * under the approved migration plan Next.js holds no Paystack secret, so the
+ * page cannot keep calling Paystack itself. The cost is a brief "Loading banks"
+ * on a screen an operator opens a few times a month, and the endpoint's
+ * one-hour `Cache-Control` makes every visit after the first instant.
+ */
+export default function OnboardTenantView() {
   const router = useRouter();
+  const {
+    data: bankData,
+    error: bankError,
+    isLoading: banksLoading,
+  } = useSWR<{ banks: Bank[] }>('/platform/banks', apiFetcher);
+  const banks = bankData?.banks ?? [];
   const [serverError, setServerError] = useState<string | null>(null);
 
   const handleSubmit = async (
@@ -85,7 +103,7 @@ export default function OnboardTenantView({ banks }: { banks: Bank[] }) {
           ? `${data.tenant.name} onboarded — settling to ${data.accountName}`
           : `${data.tenant.name} onboarded — account name could not be verified`,
       );
-      router.push(ROUTES.platform.base);
+      router.push(ROUTES.platform.tenants.base);
     } catch (err) {
       // Inline rather than a toast: a rejected bank account needs the operator
       // to correct a field they are still looking at.
@@ -149,12 +167,21 @@ export default function OnboardTenantView({ banks }: { banks: Bank[] }) {
                   name='bankCode'
                   label='Bank'
                   required
-                  placeholder='Select the bank'
+                  disabled={banksLoading || Boolean(bankError)}
+                  placeholder={
+                    banksLoading ? 'Loading banks…' : 'Select the bank'
+                  }
                   options={banks.map((bank) => ({
                     label: bank.name,
                     value: bank.code,
                   }))}
                 />
+                {bankError ? (
+                  <p role='alert' className='-mt-2 text-xs text-red-700'>
+                    Could not load the bank list from Paystack. Refresh to try
+                    again.
+                  </p>
+                ) : null}
                 <InputField
                   name='accountNumber'
                   label='Account number'
