@@ -7,7 +7,6 @@ import {
 } from '@core/validation/store-settings';
 
 import { authorizeStore, handleApiRoute } from '@/lib/auth-api';
-import { invalidateDomain } from '@/lib/domains/resolve';
 // eslint-disable-next-line no-restricted-imports -- `Tenant` is not in TENANT_SCOPED_MODELS (it IS the tenant), so `tenantDb` would pass straight through and imply a scoping that never happens. The row is pinned to the id `authorizeStore` returned.
 import { prisma } from '@/lib/prisma';
 
@@ -75,10 +74,18 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       data: parsed.data,
     });
 
-    // The name and logo appear in storefront metadata, which the domain cache
-    // fronts. Without this the merchant changes their logo and sees the old one
-    // for up to five minutes and assumes it failed.
-    if (tenant.customDomain) invalidateDomain(tenant.customDomain);
+    // No cache invalidation, deliberately. An `invalidateDomain` call used to
+    // sit here on the belief that the domain cache held the store's name and
+    // logo. It never did: that cache maps hostname -> slug and nothing else,
+    // and this route cannot change either (slug and customDomain are not in
+    // `storeSettingsSchema`). The storefront reads the tenant through React's
+    // per-request `cache`, so a new name or logo is live on the very next
+    // request. The call only forced one extra database lookup, and on
+    // serverless it would have reached one instance's copy at most.
+    //
+    // If this route ever learns to change `slug` or `customDomain`, THAT is when
+    // `invalidateDomain` belongs here — and it will need a shared store (Redis)
+    // to reach every instance, not just the one serving this request.
 
     return NextResponse.json({
       name: updated.name,
