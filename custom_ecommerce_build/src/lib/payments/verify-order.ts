@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
 
-import { OrderStatus } from '@/generated/prisma/client';
+import { type Order, OrderStatus } from '@/generated/prisma/client';
 
+import { paymentDecision } from './payment-decision';
 import { verifyTransaction } from './paystack';
 
 /**
@@ -14,6 +15,9 @@ import { verifyTransaction } from './paystack';
  * Idempotent by construction: `Order.paymentReference` is globally unique, and
  * an already-PAID order short-circuits. Whichever path arrives first wins; the
  * other no-ops.
+ *
+ * A payment for a CANCELLED order is recorded and flagged, never dropped — see
+ * `recordLatePayment` below and `paymentDecision` for the full branch table.
  */
 
 export class OrderNotFoundError extends Error {
@@ -37,7 +41,14 @@ export async function verifyAndFulfillOrder(reference: string) {
   });
 
   if (!order) throw new OrderNotFoundError(reference);
-  if (order.status !== OrderStatus.PENDING) return order;
+
+  // This used to be `if (order.status !== PENDING) return order`, which
+  // silently discarded a successful payment for an order that had been
+  // cancelled: Paystack captured and settled the money, and we recorded nothing.
+  // A cancelled, never-paid order now falls through to the same verification as
+  // a pending one — nothing is recorded on the webhook's word alone.
+  const decision = paymentDecision(order);
+  if (decision === 'already-settled') return order;
 
   const transaction = await verifyTransaction(reference);
 
@@ -65,6 +76,10 @@ export async function verifyAndFulfillOrder(reference: string) {
   }
 
   return prisma.$transaction(async (tx) => {
+    if (decision === 'record-late') {
+      return recordLatePayment(tx, order, transaction.amount);
+    }
+
     // Claim the order before touching anything else.
     //
     // The PENDING check at the top of this function is not enough on its own:
@@ -83,7 +98,16 @@ export async function verifyAndFulfillOrder(reference: string) {
     });
 
     if (claim.count === 0) {
-      return tx.order.findUniqueOrThrow({ where: { id: order.id } });
+      // Lost the race. Almost always to the other verifier (webhook vs browser),
+      // in which case the order is PAID and there is nothing to do. But if a
+      // merchant cancelled it in the milliseconds between our read and this
+      // claim, the payment is just as real — record it rather than drop it.
+      const current = await tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+      });
+      return paymentDecision(current) === 'record-late'
+        ? recordLatePayment(tx, order, transaction.amount)
+        : current;
     }
 
     let hasStockIssue = false;
@@ -167,4 +191,77 @@ export async function verifyAndFulfillOrder(reference: string) {
       },
     });
   });
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * A verified payment landed on an order that was already CANCELLED.
+ *
+ * The order stays CANCELLED — nothing is fulfilled automatically. What changes
+ * is that the money is on the books and in front of the merchant:
+ *
+ *   - `paidAmountKobo` and `paymentVerifiedAt` record what Paystack captured.
+ *   - `paidAfterCancellation` flags it for a decision: send the order by hand,
+ *     or refund. A full refund clears the flag (`applyRefund`).
+ *   - The platform's earning is written, because Paystack really did take the
+ *     `transaction_charge` at settlement. A refund reverses it, as for any order.
+ *
+ * Deliberately NOT done:
+ *
+ *   - Stock is not decremented. The order was closed and may never ship; taking
+ *     units now could mark something out of stock that is still on the shelf.
+ *     A merchant who fulfils it adjusts stock when they pack it.
+ *   - Coupon usage is not counted. The sale has not completed, and may yet be
+ *     refunded.
+ *
+ * Idempotent: the update is conditional on `paymentVerifiedAt IS NULL`, so a
+ * redelivered webhook or a second verify finds nothing to claim and returns the
+ * already-recorded order; the earning uses `skipDuplicates`.
+ */
+async function recordLatePayment(
+  tx: Tx,
+  order: Pick<
+    Order,
+    | 'id'
+    | 'tenantId'
+    | 'paymentReference'
+    | 'paymentProvider'
+    | 'platformFeeKobo'
+    | 'platformFeePercent'
+    | 'totalKobo'
+  >,
+  paidAmountKobo: number,
+) {
+  const recorded = await tx.order.updateMany({
+    where: {
+      id: order.id,
+      status: OrderStatus.CANCELLED,
+      paymentVerifiedAt: null,
+    },
+    data: {
+      paymentVerifiedAt: new Date(),
+      paidAmountKobo,
+      paidAfterCancellation: true,
+    },
+  });
+
+  if (recorded.count > 0 && order.platformFeeKobo > 0) {
+    await tx.platformEarning.createMany({
+      data: [
+        {
+          tenantId: order.tenantId,
+          orderId: order.id,
+          reference: order.paymentReference,
+          provider: order.paymentProvider,
+          amountKobo: order.platformFeeKobo,
+          feePercent: order.platformFeePercent,
+          orderTotalKobo: order.totalKobo,
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+
+  return tx.order.findUniqueOrThrow({ where: { id: order.id } });
 }

@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
       status: order.status,
       orderId: order.id,
       orderNumber: order.orderNumber,
+      // The customer paid for an order the store had already closed. The page
+      // must say the money arrived — not "being confirmed", which never ends.
+      paidAfterCancellation: order.paidAfterCancellation,
     });
   } catch (err) {
     if (err instanceof OrderNotFoundError) {

@@ -29,6 +29,7 @@ type OrderRow = {
   totalKobo: number;
   createdAt: string;
   hasStockIssue: boolean;
+  paidAfterCancellation: boolean;
   disputedAt: string | null;
   paymentFailedAt: string | null;
   refundedAmountKobo: number;
@@ -145,7 +146,10 @@ export default function OrdersView({ storeSlug }: { storeSlug: string }) {
       header: 'Status',
       accessor: (row) => {
         const badge = ORDER_STATUS_BADGE[row.status];
-        const needsAttention = row.hasStockIssue || Boolean(row.disputedAt);
+        const needsAttention =
+          row.hasStockIssue ||
+          row.paidAfterCancellation ||
+          Boolean(row.disputedAt);
         return (
           <div className='flex flex-wrap items-center gap-1.5'>
             <span
@@ -162,11 +166,17 @@ export default function OrdersView({ storeSlug }: { storeSlug: string }) {
                 title={
                   row.disputedAt
                     ? 'The customer has raised a chargeback'
-                    : 'Paid, but stock ran out before it could be packed'
+                    : row.paidAfterCancellation
+                      ? 'Paid after this order was cancelled — send it or refund'
+                      : 'Paid, but stock ran out before it could be packed'
                 }
               >
                 <AlertTriangle className='size-3' />
-                {row.disputedAt ? 'Chargeback' : 'Stock issue'}
+                {row.disputedAt
+                  ? 'Chargeback'
+                  : row.paidAfterCancellation
+                    ? 'Paid after cancel'
+                    : 'Stock issue'}
               </span>
             ) : null}
           </div>

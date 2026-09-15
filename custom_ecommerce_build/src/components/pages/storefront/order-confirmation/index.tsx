@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
@@ -12,7 +12,14 @@ import { formatCurrency } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 
-type VerifyState = 'verifying' | 'paid' | 'pending';
+/**
+ * `received` — the payment went through, but for an order the store had already
+ * closed. It is recorded and flagged for the store, which will send the order or
+ * refund. Before this state existed the page fell into `pending` ("being
+ * confirmed… you will get an email once it clears"), a promise nothing would
+ * ever keep.
+ */
+type VerifyState = 'verifying' | 'paid' | 'pending' | 'received';
 
 /**
  * Landing page after Paystack redirects back.
@@ -33,16 +40,22 @@ export default function OrderConfirmationView({
     status: string;
     totalKobo: number;
     customerEmail: string;
+    paidAfterCancellation: boolean;
   } | null;
 }) {
   const [state, setState] = useState<VerifyState>(
-    order?.status === 'PAID' ? 'paid' : 'verifying',
+    order?.status === 'PAID'
+      ? 'paid'
+      : order?.paidAfterCancellation
+        ? 'received'
+        : 'verifying',
   );
   const clearCart = useCart((s) => s.clear);
   const attempted = useRef(false);
 
   useEffect(() => {
-    if (state === 'paid') {
+    // The money has gone either way, so the cart has served its purpose.
+    if (state === 'paid' || state === 'received') {
       clearCart();
       return;
     }
@@ -64,7 +77,10 @@ export default function OrderConfirmationView({
      */
     const verify = async () => {
       try {
-        const { data } = await api.post<{ status: string }>(
+        const { data } = await api.post<{
+          status: string;
+          paidAfterCancellation?: boolean;
+        }>(
           '/payments/verify',
           {
             reference,
@@ -73,6 +89,9 @@ export default function OrderConfirmationView({
 
         if (data.status === 'PAID') {
           setState('paid');
+          clearCart();
+        } else if (data.paidAfterCancellation) {
+          setState('received');
           clearCart();
         } else {
           setState('pending');
@@ -92,6 +111,32 @@ export default function OrderConfirmationView({
         <Clock className='mx-auto size-10 animate-pulse text-gray-400' />
         <h1 className='mt-4 text-xl font-semibold'>Confirming your payment</h1>
         <p className='mt-2 text-sm text-gray-600'>This takes a few seconds.</p>
+      </div>
+    );
+  }
+
+  if (state === 'received') {
+    return (
+      <div className='mx-auto max-w-lg px-4 py-24 text-center'>
+        <Info className='mx-auto size-10 text-blue-600' />
+        <h1 className='mt-4 text-xl font-semibold'>Your payment went through</h1>
+        {/* Says the money arrived first, then what happens next. The one thing
+            this must never read as is a failed payment — it was not one. */}
+        <p className='mt-2 text-sm text-gray-600'>
+          This order had already been closed by the store when your payment
+          arrived, so it has not been dispatched. The store can see your payment
+          and will either send your order or refund you. If you would like to
+          speak to them sooner, quote the reference below.
+        </p>
+        <p className='mt-4 text-xs text-gray-500'>
+          Reference: <code>{reference}</code>
+        </p>
+        <Link
+          href={STOREFRONT_ROUTES.home}
+          className='mt-6 inline-block text-sm underline'
+        >
+          Back to the store
+        </Link>
       </div>
     );
   }

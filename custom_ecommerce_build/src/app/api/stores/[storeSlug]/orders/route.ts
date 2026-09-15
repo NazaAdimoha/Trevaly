@@ -36,7 +36,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
     const where: Prisma.OrderWhereInput = {
       ...(status ? { status } : {}),
-      ...(needsAttention === 'true' ? { hasStockIssue: true } : {}),
+      // Orders where money has moved and the store must decide something: paid
+      // but unstockable, or paid after being cancelled.
+      ...(needsAttention === 'true'
+        ? { OR: [{ hasStockIssue: true }, { paidAfterCancellation: true }] }
+        : {}),
       ...(search
         ? {
             OR: [

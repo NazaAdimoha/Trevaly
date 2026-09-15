@@ -119,7 +119,12 @@ export async function applyRefund(
       data: {
         refundedAmountKobo: totalRefunded,
         refundedAt: new Date(),
-        ...(fullyRefunded ? { status: OrderStatus.REFUNDED } : {}),
+        // A full refund is one of the two ways a paid-after-cancellation order
+        // gets resolved (the other is the merchant fulfilling it by hand), so it
+        // clears that flag. A partial refund does not — money is still held.
+        ...(fullyRefunded
+          ? { status: OrderStatus.REFUNDED, paidAfterCancellation: false }
+          : {}),
       },
     });
 

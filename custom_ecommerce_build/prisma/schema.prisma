@@ -360,6 +360,19 @@ model Order {
   hasStockIssue Boolean @default(false)
   internalNote  String?
 
+  // ── Paid after cancellation ────────────────────────────────────────────────
+  // A successful payment that arrived for an order already CANCELLED — by the
+  // merchant, or by the 24 h stale-order sweep while a slow bank transfer was
+  // still in flight. Paystack captured and settled the money regardless.
+  //
+  // The order stays CANCELLED (the owner's decision, 2026-09-15): nothing is
+  // fulfilled automatically and no stock is taken. Instead the payment is
+  // recorded (`paidAmountKobo`, `paymentVerifiedAt`) and this flag puts it in
+  // front of the merchant, who either sends the order by hand or refunds. A
+  // full refund clears it. Before this existed the payment was dropped without
+  // a trace — the customer had paid and the store had no record of it.
+  paidAfterCancellation Boolean @default(false)
+
   // ── Payment failure ────────────────────────────────────────────────────────
   // Recorded, NOT acted on. A declined card can be retried and paid minutes
   // later, so cancelling the order here would destroy a live sale. The merchant

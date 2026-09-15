@@ -35,6 +35,7 @@ type OrderDetail = {
   paidAmountKobo: number | null;
   paymentVerifiedAt: string | null;
   hasStockIssue: boolean;
+  paidAfterCancellation: boolean;
   internalNote: string | null;
   paymentFailedAt: string | null;
   paymentFailureReason: string | null;
@@ -66,7 +67,7 @@ function consequenceOf(from: OrderStatus, to: OrderStatus): string | null {
     return 'This records the refund here. It does not send any money back — issue the refund from your Paystack dashboard. A refund issued there updates this order on its own.';
   }
   if (to === OrderStatus.CANCELLED && from === OrderStatus.PENDING) {
-    return 'Only cancel an order you are sure will not be paid. If the customer completes payment afterwards, the money still reaches your bank but this order will not record it — you would need to refund or fulfil it by hand.';
+    return 'The customer has not paid yet. If they complete payment after you cancel, the money still reaches your bank — the payment is recorded and this order is flagged for you to send or refund.';
   }
   if (to === OrderStatus.CANCELLED) {
     return 'Cancelling does not refund the customer. They have paid — issue the refund from your Paystack dashboard.';
@@ -170,6 +171,35 @@ export default function OrderDetailView({
           {order.disputeStatus !== 'resolved'
             ? 'Respond from your Paystack dashboard before the deadline.'
             : null}
+        </Banner>
+      ) : null}
+
+      {order.paidAfterCancellation ? (
+        <Banner
+          tone='danger'
+          icon={<CreditCard className='size-5' />}
+          title='Paid after this order was cancelled'
+          action={
+            <Button
+              size='s'
+              variant='outline'
+              isLoading={saving}
+              onClick={() =>
+                void patch({ paidAfterCancellation: false }, 'Marked as resolved')
+              }
+            >
+              Mark resolved
+            </Button>
+          }
+        >
+          Paystack captured{' '}
+          {order.paidAmountKobo !== null
+            ? formatCurrency(order.paidAmountKobo)
+            : 'the payment'}{' '}
+          and settled it to your bank, but the order had already been
+          cancelled — nothing was fulfilled and no stock was taken. Send the
+          order and adjust stock, or refund the customer from your Paystack
+          dashboard. A full refund clears this on its own.
         </Banner>
       ) : null}
 

@@ -68,7 +68,11 @@ export async function getStoreOverview(tenant: {
       where: { status: EARNED, ...(inWindow ? { createdAt: inWindow } : {}) },
       _sum: { totalKobo: true },
     }),
-    db.order.count({ where: { hasStockIssue: true } }),
+    // Money has moved and the store must act: paid but unstockable, or paid
+    // after the order was cancelled. Same definition as the orders list filter.
+    db.order.count({
+      where: { OR: [{ hasStockIssue: true }, { paidAfterCancellation: true }] },
+    }),
 
     // Distinct emails rather than a Customer table, which does not exist yet.
     // `groupBy` so the count is of PEOPLE, not orders — a regular who ordered

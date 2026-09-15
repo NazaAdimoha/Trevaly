@@ -88,6 +88,22 @@ export default function OrderDetailScreen() {
         <StatusPill status={data.status} />
       </View>
 
+      {/* Real money on a closed order — as urgent as a chargeback, because the
+          customer is waiting to hear whether they get their items or a refund. */}
+      {data.paidAfterCancellation ? (
+        <Card style={styles.danger}>
+          <View style={styles.dangerHead}>
+            <Ionicons name="card" size={20} color={color.danger} />
+            <Text style={styles.dangerTitle}>Paid after cancellation</Text>
+          </View>
+          <Text style={styles.warningBody}>
+            The customer paid after this order was cancelled. The money is in
+            your bank, but nothing was sent and no stock was taken. Send the
+            order, or refund them from your Paystack dashboard.
+          </Text>
+        </Card>
+      ) : null}
+
       {data.hasStockIssue ? (
         <Card style={styles.warning}>
           <Text style={styles.warningTitle}>Stock ran out after payment</Text>

@@ -21,6 +21,10 @@ const orderUpdateSchema = z.object({
   status: z.enum(OrderStatus).optional(),
   internalNote: z.string().trim().max(2000).nullable().optional(),
   hasStockIssue: z.boolean().optional(),
+  // `false` only. The flag is raised by the payment path when real money lands
+  // on a cancelled order; a merchant resolves it, but setting it by hand would
+  // assert a payment that never happened.
+  paidAfterCancellation: z.literal(false).optional(),
 });
 
 type RouteContext = { params: Promise<{ storeSlug: string; id: string }> };

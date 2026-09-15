@@ -30,6 +30,7 @@ export default async function OrderConfirmationPage({
       status: true,
       totalKobo: true,
       customerEmail: true,
+      paidAfterCancellation: true,
     },
   });
 

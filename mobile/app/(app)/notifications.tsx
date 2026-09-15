@@ -66,6 +66,17 @@ function notificationsFor(order: OrderListItem): Item[] {
   const out: Item[] = [];
   const money = formatNaira(order.totalKobo);
 
+  if (order.paidAfterCancellation) {
+    out.push({
+      id: `${order.id}:paid-after-cancel`,
+      orderId: order.id,
+      kind: 'attention',
+      title: `Order #${order.orderNumber} was paid after cancelling`,
+      body: `${money} reached your bank for a cancelled order. Send it or refund.`,
+      at: order.createdAt,
+    });
+  }
+
   if (order.hasStockIssue) {
     out.push({
       id: `${order.id}:attention`,
