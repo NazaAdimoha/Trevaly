@@ -494,7 +494,7 @@ Each needs an explicit decision, and the parity suite checks every one.
 | 3 | JSON body parsed before the handler | The webhook HMAC covers the **raw bytes** | `NestFactory.create(AppModule, { rawBody: true })`; the webhook reads `req.rawBody`. Re-serialized JSON fails the signature, and **every webhook would return 401** |
 | 4 | `POST` returns 201 | Checkout, verify, preview, import and signature return 200 (verify can also return 202 or 404); resource creates return 201; product DELETE returns 204 | `@HttpCode()` on every route, with no reliance on defaults |
 | 5 | `ClassSerializerInterceptor` in many templates | Plain `JSON.stringify` (Decimal → `"1.00"`, Date → ISO) | Return plain objects and register no serializer |
-| 6 | A redirect or HTML on auth failure (common in Passport setups) | 401 JSON; store 404; platform 403 | Verify Clerk sessions with the official Express SDK (`@clerk/express`), which accepts both the Bearer header and the `__session` cookie. Set `authorizedParties` to the platform origin. Guards throw, never redirect. |
+| 6 | A redirect or HTML on auth failure (common in Passport setups) | 401 JSON; store 404; platform 403 | Verify Clerk sessions with the official Express SDK (`@clerk/express`), which accepts both the Bearer header and the `__session` cookie. Guards throw, never redirect. **Corrected in Phase 1:** do *not* set Clerk's `authorizedParties`. In `@clerk/backend` 3.17.2 it rejects any token with no `azp` claim, and the Expo app's tokens have none, so every merchant would be signed out of the app. Web does not set it either. `ClerkAuthGuard` instead refuses a token whose `azp` names an origin outside `CLERK_AUTHORIZED_PARTIES`, and accepts a token with no `azp` as web does. |
 | 7 | Throttler storage in memory | In memory per serverless instance (audit finding 8, open) | A Redis-backed fixed window with the same keys and limits, **which closes finding 8** |
 | 8 | `req.ip` is the load balancer | Leftmost `x-forwarded-for`, trusted because Vercel overwrites it | Set `trust proxy` to the host's real hop count. For requests that arrive through the Vercel rewrite, see Phase 4's IP check. |
 | 9 | No cache headers | `app/config` and `banks` set `Cache-Control` | Set the same headers explicitly |
@@ -504,6 +504,10 @@ Each needs an explicit decision, and the parity suite checks every one.
 ### Auth, precisely
 
 - **`ClerkAuthGuard`**: no valid session → `401 { error: 'Not signed in' }`.
+  Verification runs inside the guard, not as global `clerkMiddleware`. Global
+  middleware would put the identity provider in front of the Paystack webhook
+  and the health check, so a Clerk outage could fail payment webhooks and pull
+  healthy instances out of rotation.
 - **`StoreMemberGuard`** reproduces `authorizeStore()` exactly:
   1. Look up a `TenantUser` by `clerkUserId` and the `:storeSlug` param.
   2. Failing that, **any** `PlatformUser` acts as `OWNER` on an existing store.
@@ -563,8 +567,10 @@ hostname-derived slug placed in the path.
 
 - Scaffold `api/` with `config/`, `database/` (pooled, explicit pool), `auth/`,
   `common/`, a health endpoint, structured logs with request ids, and Redis.
-- Resolve `@core/*` from source in both `nest build` and the test runner. (This
+- Resolve `@core/*` from source in both the build and the test runner. (This
   is the sixth tool to learn the alias; `MOBILE_PLAN` records the other five.)
+  The build is `tsc` + `tsc-alias`, not `nest build`: the Nest 12 CLI needs
+  Node ≥ 22.22.3.
 - Move `prisma/` into `api/prisma/` with the two generator blocks, then confirm
   `prisma migrate status` reports no drift against production.
 - Move the inline route schemas into `packages/core`. While doing it, reconcile
@@ -583,6 +589,61 @@ hostname-derived slug placed in the path.
 **Exit:** isolation test green in `api/`; `app/config` passes parity; staging
 has two instances behind a health check; the measured p95 database round trip
 is recorded here.
+
+#### Phase 1 progress — 2026-09-15
+
+**Done and verified locally** (branch `fix/audit-followups`):
+
+| Item | Evidence |
+| --- | --- |
+| `api/` on Nest 12 + Express 5, CommonJS, `@core` compiled from source | `tsc` clean; build output starts |
+| `config/`: Zod env, refuses to boot | Production without `REDIS_URL` exits 1 listing the setting name only. A blank `KEY=` counts as unset. |
+| `database/`: pooled `PrismaService`, ported `tenantDb` | Diff against web's `tenant-db.ts` is the added `prisma` parameter only |
+| `prisma/` moved to `api/prisma/`, two generators | `migrate status`: up to date, 7 migrations, no drift. Web still passes tsc, tests, build and lint. |
+| `common/`: `ApiException`, `ApiExceptionFilter`, `ZodPipe`, request id + JSON logs | `test/app.test.ts` |
+| `auth/`: the three guards, `@CurrentUser`, `@CurrentStore` | `test/guards.live.test.ts` against **real Clerk sessions** (member, non-member, SUPER_ADMIN; sessions revoked afterwards); `clerk-auth.guard.spec.ts` for the `azp` rule |
+| Tenant isolation ported | `test/tenant-isolation.test.ts`, all 12 assertions, real database |
+| `GET /api/health` (readiness) | 200 when healthy; **503** with Key Value unreachable |
+| `GET /api/app/config` | **Byte-identical body** and identical `Cache-Control` to the running Next route. Only difference: `Content-Type` adds `; charset=utf-8`. |
+| Unauthenticated store route | Web and Nest both return `401 {"error":"Not signed in"}`, with no token and with a forged one |
+| `render.yaml` | Build script run on a clean copy with no `node_modules`, generated client or `dist`; started with Render's start command; health 200 |
+
+The API suite (43 tests) passed three consecutive runs.
+
+**Found while building — changes to this plan:**
+
+1. **`authorizedParties` would lock out the mobile app.** Part 4, row 6, above.
+2. **Render cannot build from `rootDir: api`.** Render's monorepo docs: "Files
+   outside your service's root directory are not available to the service at
+   build time or at runtime." The API compiles `packages/core`, so the Blueprint
+   builds from the repo root and uses `buildFilter` paths for monorepo scoping.
+3. **Render's default Node for new services is 24.14.1.** With no version
+   pinned, it reads the first `package.json` it finds in a subdirectory.
+   `render.yaml` pins `NODE_VERSION=22.22.0`, the major the API is tested on.
+   `engines` now has an upper bound.
+4. **Nest's default JSON body limit is body-parser's 100 KB**, and a 500-row
+   import with descriptions is larger. Web's route handlers have no limit. Set
+   to 2 MB, and an oversized body now returns `413 {error}`, not a 500.
+5. **The first database connection must happen at boot.** From a cold pool,
+   TLS plus waking Neon took longer than the health check's 2-second budget, so
+   a healthy new instance would fail its first check mid-deploy. `PrismaService`
+   now connects before the app listens, retrying up to three times.
+6. **Connection resets were invisible.** The pg adapter keeps a dropped
+   connection from crashing the process but reports it only to `debug`. The
+   API now logs both callbacks, and TCP keepalive is on.
+
+**Still open in Phase 1:**
+
+- Move the inline route schemas into `packages/core` and reconcile the two
+  coupon update schemas.
+- Replace web's imports of `@/generated/prisma/enums` with `@core/enums`.
+- **Needs the owner's Render account:** create the Blueprint, deploy staging,
+  measure the Virginia → Neon p50/p95 (3.3), and confirm Render's request
+  timeout.
+- **Verify `TRUST_PROXY_HOPS=1` on Render** with a request that echoes
+  `req.ip` and `x-forwarded-for`. It is inferred, not documented. If it is
+  wrong, rate limits key on the load balancer's address.
+- Set `autoDeployTrigger` to `checksPass` once CI exists (Phase 0).
 
 ### Phase 2 — Read-only endpoints · ~4 days
 

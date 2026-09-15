@@ -5,7 +5,7 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate --generator web && next build",
     "start": "next start",
     "lint": "eslint src && pnpm check:core",
     "lint:fix": "eslint src --fix && pnpm format",
@@ -17,17 +17,18 @@
     "test:e2e:ui": "playwright test --ui",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
-    "db:generate": "prisma generate && pnpm sync:core",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:generate": "prisma generate --generator web && pnpm sync:core",
+    "db:migrate": "pnpm --dir ../api db:migrate",
+    "db:deploy": "pnpm --dir ../api db:deploy",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "pnpm --dir ../api db:seed",
     "prepare": "husky",
     "check:paystack": "tsx scripts/check-paystack.ts",
     "grant:admin": "tsx scripts/grant-platform-admin.ts",
     "grant:store": "tsx scripts/grant-store-access.ts",
     "sync:core": "tsx scripts/sync-core-enums.ts",
-    "check:core": "node scripts/check-core-purity.mjs"
+    "check:core": "node scripts/check-core-purity.mjs",
+    "db:status": "prisma migrate status"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

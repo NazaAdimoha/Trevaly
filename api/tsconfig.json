@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    // CommonJS, deliberately. `packages/core` is shared SOURCE with extensionless
+    // relative imports; under `nodenext` TypeScript would treat it as ESM (its
+    // package.json says "type": "module") and reject every one of those imports.
+    // Compiled into dist/, core sits under this package's CommonJS scope at
+    // runtime. Nest 12's ESM-only packages load through require(esm).
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    // Nest's dependency injection reads constructor parameter types from
+    // decorator metadata — without these two, every injected service is undefined.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    // The repository root, because core is compiled from its source. Output
+    // therefore lands at dist/api/src and dist/packages/core/src.
+    "rootDir": "..",
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["../packages/core/src/*"],
+      "@/*": ["src/*"]
+    },
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "../packages/core/src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

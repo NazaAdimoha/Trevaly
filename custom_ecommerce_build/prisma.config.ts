@@ -3,22 +3,18 @@ import 'dotenv/config';
 import { defineConfig, env } from 'prisma/config';
 
 /**
- * Prisma 7 configuration.
+ * Web's view of the schema, which now lives in the API.
  *
- * Connection URLs moved out of `schema.prisma` in v7 — Migrate reads them from
- * here, and the runtime client takes a driver adapter instead (see
- * `src/lib/prisma.ts`).
- *
- * Migrate takes DIRECT_URL, not DATABASE_URL: migrations cannot run through
- * PgBouncer in transaction mode. (v7's datasource config no longer accepts a
- * separate `directUrl` — the migration connection is simply the one given here,
- * while the app runtime uses the pooled DATABASE_URL via its driver adapter.)
+ * Web only GENERATES from here (`prisma generate --generator web`) — it no
+ * longer owns migrations. Those run from `api/` alone, so there is exactly one
+ * pipeline that can change the database (BACKEND_MIGRATION_PLAN 3.2).
+ * `migrations.path` is kept so `prisma migrate status` still works from here
+ * for a read-only check.
  */
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
+  schema: '../api/prisma/schema.prisma',
   migrations: {
-    path: 'prisma/migrations',
-    seed: 'tsx prisma/seed.ts',
+    path: '../api/prisma/migrations',
   },
   datasource: {
     url: env('DIRECT_URL'),

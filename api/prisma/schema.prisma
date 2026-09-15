@@ -9,11 +9,33 @@
 // currency math compounds rounding errors across thousands of orders.
 // ─────────────────────────────────────────────────────────────────────────────
 
-generator client {
-  // Prisma 7: `prisma-client-js` is deprecated in favour of `prisma-client`,
-  // which requires an explicit output path and emits ESM.
+// ── Two generators, one schema ───────────────────────────────────────────────
+// The schema is owned by the API (BACKEND_MIGRATION_PLAN 3.5). Each app gets a
+// client generated inside its own root, so each resolves `@prisma/client` from
+// its own node_modules.
+//
+// Prisma 7: `prisma-client-js` is deprecated in favour of `prisma-client`, which
+// requires an explicit output path.
+
+// The NestJS API compiles to CommonJS, so its client does too. Nest 12's own
+// packages are ESM-only and load through Node's require(esm) (Node >= 22.12).
+generator api {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  // The generated client otherwise imports its own files as `./internal/x.ts`,
+  // which only a bundler or tsx understands. The API compiles with plain `tsc`,
+  // after which those files are `.js` — so the specifiers must say `.js`.
+  importFileExtension = "js"
+}
+
+// Transitional — the web app still queries Postgres directly until Phase 5.
+// Delete this block in Phase 6, when web stops touching the database.
+// Web generates ONLY this one (`prisma generate --generator web`), so a web
+// build never depends on the API's dependencies being installed.
+generator web {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../../custom_ecommerce_build/src/generated/prisma"
 }
 
 // Prisma 7 removed `url`/`directUrl` from the schema. Connection URLs for
