@@ -17,7 +17,7 @@ tenant, or a mobile build that stops parsing.
 | --- | --- |
 | Where does the backend live? | A new `api/` NestJS app beside `custom_ecommerce_build/`, `mobile/` and `packages/core/`. The web app does not move. |
 | How does it talk to the database? | **Prisma 7 + `@prisma/adapter-pg`, unchanged**, through Neon's **pooled** endpoint with an explicitly sized pool. Migrations keep using the direct endpoint, and run from the API pipeline only. |
-| Where does it run? | A long-running container in **AWS us-east-1**, the same region as the database. At least two instances. |
+| Where does it run? | **Render** (decided 2026-09-15): a web service in Render's **Virginia (US East)** region, the region nearest Neon's aws-us-east-1. At least two instances. |
 | How do we avoid breaking things? | Strangler cutover. Nest serves the **same `/api/*` contract**; the web app flips endpoints to it one group at a time with rewrites; the payment path moves last. A contract parity suite has to pass against both implementations before each flip. |
 | What does Next.js keep? | Rendering, `proxy.ts` hostname routing, Clerk session UI, SEO. **No database URL, no Paystack or Cloudinary secret.** |
 | Rough size | ~5–6 engineer-weeks, in seven phases. |
@@ -182,9 +182,9 @@ flowchart LR
   subgraph vercel[Vercel]
     NX[Next.js<br/>proxy.ts · RSC · SEO]
   end
-  subgraph aws[AWS us-east-1]
+  subgraph render[Render · Virginia US East]
     API[NestJS API<br/>2+ instances]
-    RD[(Redis<br/>rate limits)]
+    RD[(Render Key Value<br/>rate limits · domain cache)]
   end
   PG[(Neon Postgres 17<br/>pooler → compute)]
   PS[Paystack]
@@ -366,22 +366,38 @@ before the API deploy that needs them.
 
 ### 3.3 Put Nest in the same region as the database
 
-The database is in **aws-us-east-1**. Deploy Nest there too.
+The database is in **aws-us-east-1**. Nest runs on **Render** (owner's
+decision, 2026-09-15) in Render's **Virginia (US East)** region, the nearest of
+its five (Oregon, Ohio, Virginia, Frankfurt, Singapore).
 
 A Lagos user's trip to the API happens once per request. The API's trip to the
 database happens once per *query*. A checkout issues about ten queries plus a
 transaction, and a cross-region hop of 100–200 ms on each would add more than a
-second. Vercel's default function region (`iad1`) is also us-east-1, so
-Server Component → API calls stay in-region.
+second. Vercel's default function region (`iad1`) is also US East, so
+Server Component → API calls stay close.
 
-**Hosting requirements**, whichever provider (Railway, Render, Fly or AWS
-ECS/App Runner; pick the one the team already operates):
+**Verify the database round trip before creating production services.**
+Render's docs do not say which cloud or data centre backs each region, so
+"nearest" is an inference, not a guarantee — and Render does not allow changing
+a service's region after it is created. In Phase 1, deploy a throwaway service
+in Virginia that runs `SELECT 1` against Neon's pooled endpoint 200 times and
+reports p50/p95. Expect single-digit milliseconds; if it is tens, stop and
+reconsider before anything permanent is built there.
 
-- A us-east-1 region.
-- At least 2 instances with health-checked rolling deploys.
-- A load-balancer request timeout of **120 s or more**, because a 500-row
-  import that fetches images through Cloudinary runs synchronously today.
-- Managed Redis, or Upstash, reachable in-region.
+**What Render provides for the requirements below** (from Render's docs):
+
+| Requirement | On Render |
+| --- | --- |
+| At least 2 instances, health-checked rolling deploys | Manual or auto scaling. With several instances Render deploys one at a time, and cancels and reverts the whole deploy if a new instance fails its health check. Set `healthCheckPath: /api/health` — a readiness check that touches Postgres and Key Value, not just the port. |
+| Migrations from the API pipeline only | **Pre-deploy command** `prisma migrate deploy` (runs after the build, before instances roll, on a separate instance). Paid instance types only. Migrations still have to be backward compatible (3.5), because the old instances keep serving while it runs. |
+| Graceful shutdown | `maxShutdownDelaySeconds` in `render.yaml`, with Nest's `enableShutdownHooks()` draining requests and closing the `pg` pool. |
+| Redis in-region | **Render Key Value** in Virginia, on the region's private network. Services in different regions cannot use it privately. |
+| Scheduled jobs | A **Render Cron Job** calling `/api/jobs/expire-orders` replaces Vercel Cron in Phase 4 step 5. |
+| Infrastructure as code | A `render.yaml` Blueprint in the repo for the API, Key Value and cron. |
+| Request timeout of **120 s or more** (a 500-row import that fetches images through Cloudinary runs synchronously today) | **Verify in Phase 1** — not confirmed from Render's docs. If it is shorter, the import moves to a background worker before Phase 3. |
+
+Postgres traffic goes Render → Neon over the public internet with TLS
+(`sslmode=require`); Neon is not on Render's private network.
 
 ### 3.4 Neon plan and compute
 
@@ -483,7 +499,7 @@ Each needs an explicit decision, and the parity suite checks every one.
 | 8 | `req.ip` is the load balancer | Leftmost `x-forwarded-for`, trusted because Vercel overwrites it | Set `trust proxy` to the host's real hop count. For requests that arrive through the Vercel rewrite, see Phase 4's IP check. |
 | 9 | No cache headers | `app/config` and `banks` set `Cache-Control` | Set the same headers explicitly |
 | 10 | `req.hostname` is the API's host | Checkout's Paystack `callback_url` uses the **storefront origin** the customer is on | `proxy.ts` forwards the original host. Nest accepts it only if it is this tenant's subdomain or its verified custom domain, and otherwise falls back to `tenantOrigin(tenant)`. |
-| 11 | Scheduled jobs run on every instance | One Vercel Cron call | Keep a single external scheduler calling `/api/jobs/expire-orders`. The job is idempotent, but running it once is simpler to reason about than a cron on each instance. |
+| 11 | Scheduled jobs run on every instance | One Vercel Cron call | Keep a single external scheduler — a Render Cron Job — calling `/api/jobs/expire-orders`. The job is idempotent, but running it once is simpler to reason about than a cron on each instance. |
 
 ### Auth, precisely
 
@@ -557,10 +573,16 @@ hostname-derived slug placed in the path.
 - Replace web's 16 imports of `@/generated/prisma/enums` with `@core/enums`.
   This removes web's build-time dependency on Prisma generation early.
 - Port `tenantDb` and `tenant-isolation.test.ts`, and run them on a Neon branch.
-- Deploy to staging in us-east-1 and ship `GET /api/app/config`.
+- Add a `render.yaml` Blueprint: the API web service (Virginia, 2 instances,
+  `healthCheckPath`, pre-deploy `prisma migrate deploy`,
+  `maxShutdownDelaySeconds`), a Key Value instance, and the cron job.
+- Measure the Render Virginia → Neon round trip (3.3) **before** creating the
+  production service, and confirm Render's request timeout.
+- Deploy to staging on Render and ship `GET /api/app/config`.
 
 **Exit:** isolation test green in `api/`; `app/config` passes parity; staging
-has two instances behind a health check.
+has two instances behind a health check; the measured p95 database round trip
+is recorded here.
 
 ### Phase 2 — Read-only endpoints · ~4 days
 
@@ -609,8 +631,8 @@ Ordered so that each step can be rolled back independently.
    then run the full E2E suite, a refund and a dispute.
 4. **Webhook, live mode.** Change the live webhook URL, then place one real
    low-value transaction and refund it.
-5. **Scheduled job.** Point the scheduler at `/api/jobs/expire-orders` and
-   remove the cron from `vercel.json`.
+5. **Scheduled job.** Create the Render Cron Job for `/api/jobs/expire-orders`
+   and remove the cron from `vercel.json`.
 
 **Why the two implementations can safely overlap.** Idempotency lives in the
 **database**, not in either codebase:
@@ -733,7 +755,7 @@ handlers deleted.
 | Custom-domain lookup adds a hop | Slower first hit per domain per instance | The LRU stays in `proxy.ts`; subdomains need no lookup |
 | Paystack callback lands on the API host | Customers on the redirect flow see a JSON page | Forward and validate the storefront origin (Part 4, row 10) |
 | Import exceeds the load-balancer timeout | A partially imported catalogue | Timeout of 120 s or more; verify in Phase 3; a background job later |
-| Nest far from the database | Checkout slows by more than a second | us-east-1, beside Neon |
+| Nest far from the database | Checkout slows by more than a second | Render Virginia beside Neon's us-east-1, with the round trip measured before the region is committed (it cannot be changed later) |
 
 ---
 
@@ -770,7 +792,7 @@ Status as of 2026-09-14. Fixes are on branch `fix/audit-followups`.
 | 4 | **Checkout was a coupon oracle.** | **Fixed.** `publicCouponRejection` + `COUPON_NOT_APPLICABLE` in `packages/core/src/validation/coupon.ts`, used by both checkout and preview. "Below minimum" is uniform too — otherwise a one-item cart enumerates live codes. Verified against the running app: five failure kinds (nonexistent, expired, used up, inactive, below minimum) → one identical response from each endpoint. |
 | 5 | **`invalidateDomain` in settings PATCH did nothing useful.** | **Removed**, with a comment saying why. The domain cache holds hostname → slug only; the route cannot change either; the storefront reads the tenant through per-request React `cache`, so name and logo changes are live on the next request. If the route ever changes `slug` or `customDomain`, invalidation belongs there — and needs Redis to reach every instance. |
 | 6 | **Money displayed 100× too small** on delivery areas (₦1,500 fee shown as ₦15.00) and coupons (₦500 off shown as ₦5.00). `formatCurrency` takes kobo; both pages divided by 100 first. Stored values were correct. Found while wiring the checkout discount. | **Fixed.** `money-usage.test.ts` fails on any `formatCurrency(... / 100)`, and was checked against the baseline commit to confirm it catches both. |
-| 7 | **A payment that lands on a cancelled order is silently dropped.** `verifyAndFulfillOrder` returns early for any order that is not PENDING. Paystack still captures and settles the money; we record no `paidAmountKobo`, no flag. Reachable when a merchant cancels a PENDING order, or when `expireStaleOrders` cancels one after 24 h and a slow bank transfer confirms later. | **Open — needs a product decision:** revive the order (CANCELLED → PAID and fulfil) or keep it cancelled, record the payment and raise a needs-attention flag. Until then the cancel dialog warns merchants, and the sweep is not live (`CRON_SECRET` unset). The nightly reconciliation in Part 11 would catch it either way. This touches `verify-order.ts`, so it lands before the Phase 0 freeze or in both codebases. |
+| 7 | **A payment that lands on a cancelled order was silently dropped.** `verifyAndFulfillOrder` returned early for any order that was not PENDING. Paystack still captured and settled the money; nothing was recorded. Reachable when a merchant cancels a PENDING order, or when `expireStaleOrders` cancels one after 24 h and a slow bank transfer confirms later. | **Fixed — record and flag** (owner's decision, 2026-09-15). The order stays CANCELLED; the payment is recorded (`paidAmountKobo`, `paymentVerifiedAt`), `paidAfterCancellation` is raised, and the platform earning is written. No stock taken, no coupon use counted. Handled on both paths — the early return and the race where a cancellation lands between read and claim. A full refund clears the flag. Surfaced in the web and app order screens, the needs-attention filter and overview count, the app's notifications, and the customer's confirmation page ("Your payment went through"). Verified with a real Paystack test-mode charge on a cancelled order, plus the full E2E suite. |
 | 8 | **Duplicate coupon update schemas**, as noted in Phase 1. | Open — Phase 1. |
 
 ---
@@ -781,18 +803,19 @@ Answered by the owner on 2026-09-14: "yes to all the decisions".
 
 1. **Nest host** in us-east-1: whichever of Railway, Render, Fly or AWS
    ECS/App Runner the team will actually operate. The requirements are in 3.3.
-   **Still open** — "yes" does not pick one of the four. Needed before Phase 1
-   deploys to staging.
+   **Decided 2026-09-15: Render**, Virginia (US East) region. See 3.3 for what
+   that means and the latency check to run first.
 2. **Neon plan upgrade**, autoscaling and no scale-to-zero, before Phase 4.
    **Approved.**
 3. **Redis provider**: Upstash, or the host's managed Redis.
-   **Approved: whichever is in-region with the API** — so it follows decision 1.
+   **Approved: whichever is in-region with the API** — so **Render Key Value**
+   in Virginia.
 4. **Storefront transport**: a same-origin proxy rewrite, or direct CORS.
    **Approved: the rewrite** (Part 2).
 5. **First mobile store build targets the API host directly.**
    **Approved.**
-6. **New — late payment on a cancelled order** (Part 9 #7): revive, or record
-   and flag?
+6. **Late payment on a cancelled order** (Part 9 #7): **record and flag**
+   (decided 2026-09-15; implemented).
 
 ---
 
@@ -807,7 +830,7 @@ folder.) What each means for this plan, stated against what the code does today:
 
 | Practice | Here today | Action |
 | --- | --- | --- |
-| Centralised counter store (Redis) | Per-process `Map`. On serverless the effective limit is the configured limit × warm instances, and it resets on cold start. | **Phase 1:** move `lib/rate-limit` to Redis before running two Nest instances. |
+| Centralised counter store (Redis) | Per-process `Map`. On serverless the effective limit is the configured limit × warm instances, and it resets on cold start. | **Phase 1:** move `lib/rate-limit` to Render Key Value before running two Nest instances. |
 | Sliding-window counter | Fixed-window style `Map` | Implement the sliding-window counter atomically (Lua or `INCR` + `EXPIRE` in one `MULTI`). |
 | Tell clients when to retry | `Retry-After` on 429 already | Add `X-RateLimit-Remaining`. |
 | Key on the real client | IP + tenant | The `x-client-ip` stamping in Phase 4 step 2, or every shopper behind the rewrite shares one bucket. |
