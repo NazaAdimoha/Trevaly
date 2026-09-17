@@ -1,0 +1,62 @@
+{
+  "name": "commerce-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NestJS API for the multi-tenant commerce platform. See custom_ecommerce_build/docs/BACKEND_MIGRATION_PLAN.md.",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "start": "node --disable-warning=ExperimentalWarning dist/api/src/main.js",
+    "dev": "pnpm build && node --disable-warning=ExperimentalWarning dist/api/src/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "prisma generate --generator api && pnpm sync:core",
+    "db:status": "prisma migrate status",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "sync:core": "tsx scripts/sync-core-enums.ts",
+    "grant:admin": "tsx scripts/grant-platform-admin.ts",
+    "grant:store": "tsx scripts/grant-store-access.ts",
+    "check:paystack": "tsx scripts/check-paystack.ts"
+  },
+  "dependencies": {
+    "@clerk/express": "^2.1.67",
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/core": "^12.0.3",
+    "@nestjs/platform-express": "^12.0.3",
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
+    "dotenv": "^17.2.3",
+    "ioredis": "^6.0.0",
+    "pg": "^8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^12.0.3",
+    "@swc/core": "^1.16.2",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.0",
+    "@types/pg": "^8.15.5",
+    "@types/supertest": "^6.0.3",
+    "prisma": "7.9.1",
+    "supertest": "^7.1.4",
+    "tsc-alias": "^1.9.5",
+    "tsx": "^4.23.7",
+    "typescript": "~6.0.3",
+    "unplugin-swc": "^1.6.0",
+    "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "@swc/core",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

@@ -1,0 +1,137 @@
+# Render Blueprint for the NestJS API — BACKEND_MIGRATION_PLAN 3.3 and Phase 1.
+#
+# Nothing here serves traffic until a route is flipped (plan Part 5). Secrets
+# are `sync: false`: Render prompts for them once, when the Blueprint is first
+# created, and never stores them in this file. Keys added to `sync: false`
+# AFTER creation must be set in the dashboard by hand — Render ignores them on
+# later syncs.
+#
+# Field names checked against https://render.com/docs/blueprint-spec (2026-09-15).
+
+services:
+  - type: web
+    name: commerce-api
+    runtime: node
+    # Nearest region to Neon aws-us-east-1. Cannot be changed after creation —
+    # measure the Render → Neon round trip first (plan 3.3).
+    region: virginia
+    # Paid instance type: the pre-deploy command is not available on free.
+    plan: 0.5c-512mb
+    # Two, so a rolling deploy always has an instance serving, and one bad
+    # instance is not an outage. Instances × DB_POOL_MAX must stay under the
+    # pooler's limit.
+    numInstances: 2
+    branch: main
+    # Off until CI exists (Phase 0). Then `checksPass`, so a red build never
+    # reaches the instances.
+    autoDeployTrigger: 'off'
+    # No rootDir — see api/scripts/render-build.sh. The build filter does the
+    # monorepo scoping instead: web- or mobile-only commits do not redeploy.
+    buildFilter:
+      paths:
+        - api/**
+        - packages/core/**
+      ignoredPaths:
+        - api/test/**
+        - api/**/*.spec.ts
+    buildCommand: bash api/scripts/render-build.sh
+    # Runs once per deploy, after the build and before any instance rolls.
+    # Old instances keep serving while it runs, so every migration must be
+    # backward compatible (expand/contract, plan 3.5).
+    preDeployCommand: npx --yes pnpm@10.32.1 --dir api db:deploy
+    startCommand: cd api && node --disable-warning=ExperimentalWarning dist/api/src/main.js
+    # Readiness, not liveness: touches Postgres and Key Value. A new instance
+    # that fails it cancels the deploy and the previous one keeps serving.
+    healthCheckPath: /api/health
+    # SIGTERM → Nest drains in-flight requests and closes the pool. 60s covers
+    # a slow checkout's Paystack call; the platform maximum is 300.
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render's default for new services is Node 24; the API is built and
+      # tested on 22. Pinned here (highest precedence) rather than in a
+      # repo-root .node-version, which would also change local and web tooling.
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: DB_POOL_MAX
+        value: '10'
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      - key: MOBILE_MINIMUM_VERSION
+        value: 1.0.0
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: commerce-kv
+          property: connectionString
+      # Neon pooled (-pooler) endpoint, for the app.
+      - key: DATABASE_URL
+        sync: false
+      # Neon direct endpoint, for `prisma migrate deploy` and generate only.
+      - key: DIRECT_URL
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      # Optional: the instance's PEM public key, for networkless verification.
+      - key: CLERK_JWT_KEY
+        sync: false
+      # Browser origins, comma-separated, e.g. https://yourbrand.com
+      - key: CLERK_AUTHORIZED_PARTIES
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ROOT_DOMAIN
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # sk_live_… in production. Checkout, verification, onboarding and the
+      # webhook signature all use it.
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      # Shared with the web app's INTERNAL_API_KEY (Vercel). Required in
+      # production: the API refuses to boot without it.
+      - key: INTERNAL_API_KEY
+        sync: false
+      # The same value the scheduler sends. Until the Render Cron Job exists,
+      # Vercel Cron calls the web app, which forwards to /api/jobs/expire-orders.
+      - key: CRON_SECRET
+        sync: false
+
+  # Shared store for rate limits and the domain cache (security audit
+  # finding 8; plan Part 11). Private network only — reachable from services in
+  # the same region, never from the internet.
+  - type: keyvalue
+    name: commerce-kv
+    region: virginia
+    plan: 256mb
+    ipAllowList: []
+    # Every key the API writes carries a TTL; under memory pressure evicting
+    # the least recently used is safer than refusing writes, which would fail
+    # rate-limit checks.
+    maxmemoryPolicy: allkeys-lru
+
+  # Enabled in Phase 4 step 5, when `/api/jobs/expire-orders` exists in Nest and
+  # Vercel Cron is removed. Left commented so a sync does not create a job that
+  # calls a route that is not there yet.
+  #
+  # - type: cron
+  #   name: commerce-expire-orders
+  #   runtime: node
+  #   region: virginia
+  #   plan: 0.5c-512mb
+  #   # Same as the Vercel Cron it replaces: daily at 03:00 UTC.
+  #   schedule: '0 3 * * *'
+  #   buildCommand: 'true'
+  #   startCommand: >-
+  #     curl -fsS -H "Authorization: Bearer $CRON_SECRET"
+  #     https://commerce-api.onrender.com/api/jobs/expire-orders
+  #   envVars:
+  #     - key: CRON_SECRET
+  #       sync: false

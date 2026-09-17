@@ -294,17 +294,20 @@ test.describe('M6 — adversarial', () => {
       deliveryMethod: 'PICKUP',
     };
 
-    // On the platform host the header is stripped and never replaced.
+    // On the platform host the header is stripped, and there is no checkout at
+    // all: the API only has store-addressed checkout, which the proxy builds
+    // from a store's hostname. (Before the API move this was a 400 "Missing
+    // tenant context" from web's own route.)
     const onPlatform = await request.post(`${LOCAL_ORIGIN}/api/checkout`, {
       headers: { ...hostHeader(), 'x-tenant-slug': E2E_TENANT },
       data: body,
     });
-    expect(onPlatform.status()).toBe(400);
-    expect((await onPlatform.json()).error).toBe('Missing tenant context');
+    expect(onPlatform.status()).toBe(404);
 
-    // On a tenant host the header is replaced by the one the hostname implies,
-    // so naming a different tenant changes nothing: the order lands under the
-    // host's tenant, where the other store's product does not exist.
+    // On a tenant host the store comes from the hostname, placed in the API
+    // path by the proxy, so naming a different tenant changes nothing: the
+    // order is attempted under the host's store, where the other store's
+    // product does not exist.
     const chidiProduct = await one<{ id: string }>(
       `SELECT p.id FROM "Product" p JOIN "Tenant" t ON t.id = p."tenantId"
         WHERE t.slug = 'chidi-electronics' LIMIT 1`,

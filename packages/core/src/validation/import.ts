@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { toCsv } from "../csv";
 import { slugifyCategory } from "./category";
 
@@ -274,3 +276,10 @@ export function importTemplateCsv(): string {
 
 /** Suggests a category slug the same way the admin form would. */
 export const importCategorySlug = slugifyCategory;
+
+/** Body of the product import endpoint. */
+export const importRequestSchema = z.object({
+  csv: z.string().min(1).max(2_000_000),
+  /** Preview by default. Nothing is written until the merchant confirms. */
+  commit: z.boolean().default(false),
+});

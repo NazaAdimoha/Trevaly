@@ -2,13 +2,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
-import { tenantDb } from '@/lib/tenant-db';
 
 import JsonLd from '@/components/JsonLd';
 import ProductGrid from '@/components/pages/storefront/home';
 import CategoryNav from '@/components/pages/storefront/home/category-nav';
 
-import { resolveStorefrontTenant } from '@/app/sites/_tenant';
+import { getStorefrontCatalog, resolveStorefrontTenant } from '@/app/sites/_tenant';
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 
 type RouteParams = { params: Promise<{ tenant: string; slug: string }> };
@@ -28,9 +27,7 @@ export async function generateMetadata({
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) return {};
 
-  const category = await tenantDb(tenant.id).category.findFirst({
-    where: { slug, isActive: true },
-  });
+  const category = (await getStorefrontCatalog(tenantSlug, slug))?.category;
   if (!category) return {};
 
   const description = `Browse ${category.name.toLowerCase()} at ${tenant.name}. ${
@@ -57,27 +54,12 @@ export default async function StorefrontCategoryPage({ params }: RouteParams) {
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) notFound();
 
-  const db = tenantDb(tenant.id);
-
-  // tenantId is injected by the wrapper — deliberately absent here.
-  const category = await db.category.findFirst({
-    where: { slug, isActive: true },
-  });
-  if (!category) notFound();
-
-  const [categories, products] = await Promise.all([
-    db.category.findMany({
-      where: { isActive: true },
-      orderBy: [{ position: 'asc' }, { name: 'asc' }],
-      select: { id: true, name: true, slug: true },
-    }),
-    db.product.findMany({
-      where: { isActive: true, categoryId: category.id },
-      include: { variants: true },
-      orderBy: { createdAt: 'desc' },
-      take: 60,
-    }),
-  ]);
+  // The API scopes every read to this store and answers 404 for a category
+  // that does not exist or is hidden.
+  const catalog = await getStorefrontCatalog(tenantSlug, slug);
+  const category = catalog?.category;
+  if (!catalog || !category) notFound();
+  const { categories, products } = catalog;
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',

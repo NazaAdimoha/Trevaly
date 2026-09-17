@@ -10,13 +10,12 @@ import {
 } from '@core/variants';
 
 import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
-import { tenantDb } from '@/lib/tenant-db';
 import { toMajor } from '@/lib/utils';
 
 import JsonLd from '@/components/JsonLd';
 import ProductDetailView from '@/components/pages/storefront/product-detail';
 
-import { resolveStorefrontTenant } from '@/app/sites/_tenant';
+import { getStorefrontProduct, resolveStorefrontTenant } from '@/app/sites/_tenant';
 
 export async function generateMetadata({
   params,
@@ -27,9 +26,7 @@ export async function generateMetadata({
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) return {};
 
-  const product = await tenantDb(tenant.id).product.findFirst({
-    where: { slug, isActive: true },
-  });
+  const product = await getStorefrontProduct(tenantSlug, slug);
   if (!product) return {};
 
   return {
@@ -57,10 +54,7 @@ export default async function StorefrontProductPage({
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) notFound();
 
-  const product = await tenantDb(tenant.id).product.findFirst({
-    where: { slug, isActive: true },
-    include: { variants: true },
-  });
+  const product = await getStorefrontProduct(tenantSlug, slug);
   if (!product) notFound();
 
   const url = tenantUrl(tenant, `/products/${product.slug}`);

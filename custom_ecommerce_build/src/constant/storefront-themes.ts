@@ -1,4 +1,4 @@
-import { StorefrontTheme } from '@/generated/prisma/enums';
+import { StorefrontTheme } from '@core/enums';
 
 /**
  * Storefront themes — the token sets behind `Tenant.theme`.

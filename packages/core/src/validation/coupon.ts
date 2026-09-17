@@ -33,10 +33,23 @@ export const couponWriteSchema = z
     path: ["expiresAt"],
   });
 
+/**
+ * What may change on a live coupon.
+ *
+ * `code`, `type` and `value` are deliberately absent. A coupon that has already
+ * been used is a record of a promise made to customers, and silently changing
+ * what "SAVE10" means would rewrite the terms of orders already placed under
+ * it. To change the offer, deactivate this one and make another.
+ *
+ * `minOrderKobo` is allowed: the API route always accepted it, and this copy
+ * did not — the two had drifted (migration plan, Phase 1). The route's
+ * behaviour is what merchants have been using, so it wins.
+ */
 export const couponUpdateSchema = z.object({
   isActive: z.boolean().optional(),
   maxUses: z.number().int().min(1).max(1_000_000).nullable().optional(),
   expiresAt: z.iso.datetime().nullable().optional(),
+  minOrderKobo: z.number().int().min(0).optional(),
 });
 
 export type CouponWritePayload = z.infer<typeof couponWriteSchema>;
@@ -62,6 +75,42 @@ export function computeDiscountKobo(
 }
 
 /** Every reason a coupon may be refused, evaluated server-side only. */
+/**
+ * The ONLY coupon message a shopper ever sees.
+ *
+ * Coupon codes are short and guessable, and any endpoint that answers
+ * differently for "no such code", "expired", "used up" or "below the minimum"
+ * is an enumeration oracle — a rate limit then only slows the attack down
+ * rather than blinding it.
+ *
+ * "Below the minimum" is included on purpose even though it is the one genuinely
+ * helpful reason. Otherwise the attack is trivial: submit a one-item cart, and
+ * every code that comes back "below minimum" is proven to exist. A merchant who
+ * wants customers to know a minimum says so wherever they share the code.
+ */
+export const COUPON_NOT_APPLICABLE =
+  "This coupon cannot be applied to your order";
+
+/**
+ * Public-facing rejection: `null` when the coupon applies, otherwise the one
+ * uniform message. Both `/api/checkout` and `/api/coupons/preview` go through
+ * this, so the two cannot drift apart again — they did once, which is how
+ * checkout became the oracle preview was built not to be.
+ */
+export function publicCouponRejection(
+  coupon: Parameters<typeof couponRejectionReason>[0],
+  subtotalKobo: number,
+): string | null {
+  return couponRejectionReason(coupon, subtotalKobo) === null
+    ? null
+    : COUPON_NOT_APPLICABLE;
+}
+
+/**
+ * The precise reason, for logs and tests only.
+ *
+ * NEVER return this to a shopper — see `COUPON_NOT_APPLICABLE`.
+ */
 export function couponRejectionReason(
   coupon: {
     isActive: boolean;

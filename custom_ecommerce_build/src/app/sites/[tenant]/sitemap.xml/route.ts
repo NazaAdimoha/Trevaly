@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 
 import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
-import { tenantDb } from '@/lib/tenant-db';
+import { apiGet } from '@/lib/server-api';
 
-import { resolveStorefrontTenant } from '@/app/sites/_tenant';
+import { resolveStorefrontTenant, storefrontApiPath } from '@/app/sites/_tenant';
 
 /**
  * Per-tenant `sitemap.xml`.
@@ -13,9 +13,9 @@ import { resolveStorefrontTenant } from '@/app/sites/_tenant';
  * reverse) is rejected as cross-host, and mixing the two is exactly the
  * duplicate-content problem the canonical exists to solve.
  *
- * Queried through `tenantDb` and not `prisma`. This is the one endpoint whose
- * whole job is to publish a catalogue, so a scoping mistake here would hand one
- * business's product list to Google under another business's domain.
+ * The catalogue comes from the API's store-scoped sitemap endpoint. This is the
+ * one route whose whole job is to publish a catalogue, so a scoping mistake
+ * would hand one business's product list to Google under another's domain.
  */
 
 /**
@@ -48,23 +48,10 @@ export async function GET(
 
   if (!tenant) notFound();
 
-  const db = tenantDb(tenant.id);
-
-  // tenantId is injected by the wrapper — deliberately absent here.
-  const [categories, products] = await Promise.all([
-    db.category.findMany({
-      where: { isActive: true },
-      select: { slug: true },
-      orderBy: { position: 'asc' },
-      take: 200,
-    }),
-    db.product.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-      take: 5000,
-    }),
-  ]);
+  const { categories, products } = await apiGet<{
+    categories: Array<{ slug: string }>;
+    products: Array<{ slug: string; updatedAt: string }>;
+  }>(storefrontApiPath(slug, '/sitemap'));
 
   const now = new Date();
   const entries = [
@@ -78,7 +65,7 @@ export async function GET(
     })),
     ...products.map((product) => ({
       loc: tenantUrl(tenant, `/products/${product.slug}`),
-      lastmod: product.updatedAt,
+      lastmod: new Date(product.updatedAt),
       priority: '0.8',
     })),
   ];

@@ -22,6 +22,8 @@ export const orderListItemSchema = z.looseObject({
   customerName: z.string(),
   totalKobo: z.number().int(),
   hasStockIssue: z.boolean(),
+  // Nullish so a response cached before this field existed still parses.
+  paidAfterCancellation: z.boolean().nullish(),
   createdAt: z.string(),
 });
 export type OrderListItem = z.infer<typeof orderListItemSchema>;
@@ -45,6 +47,8 @@ export const orderDetailSchema = z.looseObject({
   discountKobo: z.number().int(),
   totalKobo: z.number().int(),
   hasStockIssue: z.boolean(),
+  // Nullish so a response cached before this field existed still parses.
+  paidAfterCancellation: z.boolean().nullish(),
   internalNote: z.string().nullable(),
   createdAt: z.string(),
   // Nullish, not nullable: a response cached by a build older than these fields

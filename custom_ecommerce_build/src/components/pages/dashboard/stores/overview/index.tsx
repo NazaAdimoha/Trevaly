@@ -6,7 +6,7 @@ import { formatCurrency } from '@/lib/utils';
 import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
-import type { TenantStatus } from '@/generated/prisma/enums';
+import type { TenantStatus } from '@core/enums';
 
 type Stats = {
   productCount: number;
@@ -43,16 +43,16 @@ export default function StoreOverviewView({
       />
 
       {stats.needsAttention > 0 ? (
-        // Orders paid where stock ran out at fulfillment. Money moved; the
-        // owner has to refund or backorder. This must never be buried.
+        // Orders where money moved and the owner must decide: paid but stock
+        // ran out, or paid after the order was cancelled. Never buried.
         <Link
           href={`${ROUTES.store.orders.base(storeSlug)}?needsAttention=true`}
           className='flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900'
         >
           <AlertTriangle className='size-4 shrink-0' />
           {stats.needsAttention} paid{' '}
-          {stats.needsAttention === 1 ? 'order needs' : 'orders need'} attention
-          — stock was unavailable at fulfillment.
+          {stats.needsAttention === 1 ? 'order needs' : 'orders need'} a
+          decision — out of stock, or paid after being cancelled.
         </Link>
       ) : null}
 

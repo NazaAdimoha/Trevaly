@@ -2,18 +2,14 @@ import { LRUCache } from 'lru-cache';
 
 import { classifyHostname, normalizeHostname } from '@core/hostname';
 
-import { prisma } from '@/lib/prisma';
-
 /**
- * Hostname -> tenant slug resolution.
+ * Hostname -> tenant slug resolution, for `proxy.ts`.
  *
- * Note on the original design: the pricing doc routed custom-domain lookups
- * through a fetch to `/api/internal/resolve-domain` with
- * `next: { revalidate: 300 }`, because Edge middleware could not reach Prisma.
- * Two problems — the Next Data Cache is not available in middleware at all, so
- * that fetch was uncached and cost a full extra serverless invocation on every
- * request to a custom domain; and as of Next.js 16 `proxy.ts` runs on the Node
- * runtime, so the indirection is unnecessary. We query directly and cache here.
+ * Subdomains resolve with no lookup at all, so an API outage can never take a
+ * subdomain storefront offline at the routing step. A custom domain is looked
+ * up through the API's internal endpoint (the web app has no database) and
+ * cached here exactly as the direct query was: 5 minutes for a hit, 30 seconds
+ * for a miss, and a failure never cached as "no such tenant".
  */
 
 const NEGATIVE = Symbol('not-found');
@@ -29,10 +25,6 @@ const NEGATIVE_TTL = 30 * 1000;
 export type TenantResolution =
   { kind: 'platform' } | { kind: 'tenant'; slug: string } | { kind: 'unknown' };
 
-/**
- * Safe to call on every request: subdomain hits never touch the database, and
- * a custom domain hits it at most once per TTL.
- */
 export async function resolveHostname(
   host: string | null | undefined,
   rootDomain: string,
@@ -63,21 +55,32 @@ async function resolveCustomDomain(hostname: string): Promise<string | null> {
   if (cached === NEGATIVE) return null;
   if (typeof cached === 'string') return cached;
 
-  try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { customDomain: hostname },
-      select: { slug: true, customDomainVerified: true },
-    });
+  const origin = process.env.API_ORIGIN;
+  const key = process.env.INTERNAL_API_KEY;
+  if (!origin || !key) return null;
 
-    if (!tenant?.customDomainVerified) {
+  try {
+    const res = await fetch(
+      `${origin.replace(/\/+$/, '')}/api/internal/domains/${encodeURIComponent(hostname)}`,
+      {
+        headers: { 'x-internal-key': key },
+        cache: 'no-store',
+        // Routing must not hang on a slow API; an unresolved domain shows the
+        // not-found page and is retried on the next request.
+        signal: AbortSignal.timeout(3_000),
+      },
+    );
+
+    if (res.status === 404) {
       cache.set(hostname, NEGATIVE, { ttl: NEGATIVE_TTL });
       return null;
     }
+    if (!res.ok) return null; // never cache an infrastructure failure
 
-    cache.set(hostname, tenant.slug);
-    return tenant.slug;
+    const { slug } = (await res.json()) as { slug: string };
+    cache.set(hostname, slug);
+    return slug;
   } catch {
-    // Never cache an infrastructure failure as "no such tenant".
     return null;
   }
 }

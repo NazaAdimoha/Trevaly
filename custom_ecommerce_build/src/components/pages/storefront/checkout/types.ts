@@ -1,6 +1,6 @@
 import * as Yup from 'yup';
 
-import { DeliveryMethod } from '@/generated/prisma/enums';
+import { DeliveryMethod } from '@core/enums';
 
 export interface ICheckoutFormValues {
   customerName: string;

@@ -141,6 +141,46 @@ This protects the checkout, coupon preview, CSV import and upload signing.
 Flagged rather than papered over, because a limiter that looks present but does
 not hold is worse than a known gap.
 
+### 9. Checkout was a coupon enumeration oracle — MEDIUM, FIXED
+
+Found during the backend migration review (2026-09-14). `/api/coupons/preview`
+answered every invalid code identically, by design — but `/api/checkout`
+returned the precise reason: "Coupon not found", "This coupon has expired",
+"This coupon has been fully used", "below this coupon's minimum". Checkout's
+8/min limit only slowed enumeration down (and the limiter is per-instance —
+finding 8).
+
+**Fix:** `publicCouponRejection` and `COUPON_NOT_APPLICABLE` in
+`packages/core/src/validation/coupon.ts`, now the only thing either endpoint
+returns to a shopper. "Below minimum" is uniform too: it proves the code exists,
+so a one-item cart would otherwise enumerate every live code.
+
+Verified against the running app with four temporary coupons (removed after):
+
+| Code state | Checkout | Preview |
+|---|---|---|
+| does not exist, expired, used up, inactive, below minimum | identical `400` | identical `200 {"valid":false}` |
+| valid (`WELCOME10`) | — | `200`, discount quoted |
+
+### 10. Finding 6 was only fixed on screen — MEDIUM, FIXED
+
+Found while comparing storefront pages before and after the backend moved to
+the API (2026-09-15). The order confirmation page passed the order's full
+`customerEmail` into a Client Component and masked it there, so the full
+address was serialized into the page source for anyone holding the reference.
+The API's `GET /api/storefront/:slug/orders/:reference` now returns only
+`maskedEmail`; the full address never leaves the API for this page. Checked
+against the rendered HTML: the customer address is gone, the store's own public
+contact email is the only address left.
+
+### 11. Internal API reachable through the public proxy — LOW, FIXED
+
+Found during the same verification. The web proxy stamps its internal key on
+every request it forwards, so `/api/internal/domains/:host` answered anyone who
+called it through the public site (it returned which store a custom domain
+belongs to). `proxy.ts` now refuses `/api/internal/*` before forwarding; a
+forged key sent straight to the API gets 401.
+
 ## Deliberately not changed
 
 - **Cloudinary public IDs are unguessable but public.** Product images are meant

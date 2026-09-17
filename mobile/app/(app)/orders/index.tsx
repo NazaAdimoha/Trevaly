@@ -166,7 +166,9 @@ function OrderRow({
         <Money kobo={order.totalKobo} style={styles.total} />
         <Text style={styles.date}>{formatWhen(order.createdAt)}</Text>
       </View>
-      {order.hasStockIssue ? (
+      {order.paidAfterCancellation ? (
+        <Text style={styles.issue}>Paid after cancellation — send or refund</Text>
+      ) : order.hasStockIssue ? (
         <Text style={styles.issue}>Paid, but stock ran out — needs attention</Text>
       ) : null}
     </Pressable>

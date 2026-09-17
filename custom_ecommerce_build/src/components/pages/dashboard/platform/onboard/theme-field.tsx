@@ -8,7 +8,7 @@ import {
   STOREFRONT_THEME_OPTIONS,
   STOREFRONT_THEMES,
 } from '@/constant/storefront-themes';
-import type { StorefrontTheme } from '@/generated/prisma/enums';
+import type { StorefrontTheme } from '@core/enums';
 
 /**
  * Storefront look picker.

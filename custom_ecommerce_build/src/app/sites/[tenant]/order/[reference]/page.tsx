@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { tenantDb } from '@/lib/tenant-db';
+import { apiGetOrNull } from '@/lib/server-api';
 
 import OrderConfirmationView from '@/components/pages/storefront/order-confirmation';
 
-import { resolveStorefrontTenant } from '@/app/sites/_tenant';
+import { resolveStorefrontTenant, storefrontApiPath } from '@/app/sites/_tenant';
 
 export const metadata: Metadata = {
   title: 'Order confirmation',
@@ -21,17 +21,16 @@ export default async function OrderConfirmationPage({
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) notFound();
 
-  // Scoped read: a reference from another store must not resolve here even
-  // though paymentReference is globally unique.
-  const order = await tenantDb(tenant.id).order.findFirst({
-    where: { paymentReference: reference },
-    select: {
-      orderNumber: true,
-      status: true,
-      totalKobo: true,
-      customerEmail: true,
-    },
-  });
+  // Scoped by the API: a reference from another store does not resolve here
+  // even though paymentReference is globally unique. The email arrives already
+  // masked — the full address never leaves the API for this page.
+  const order = await apiGetOrNull<{
+    orderNumber: number;
+    status: string;
+    totalKobo: number;
+    maskedEmail: string;
+    paidAfterCancellation: boolean;
+  }>(storefrontApiPath(tenantSlug, `/orders/${encodeURIComponent(reference)}`));
 
   return <OrderConfirmationView reference={reference} order={order} />;
 }

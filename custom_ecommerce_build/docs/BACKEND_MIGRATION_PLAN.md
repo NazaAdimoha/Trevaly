@@ -17,14 +17,88 @@ tenant, or a mobile build that stops parsing.
 | --- | --- |
 | Where does the backend live? | A new `api/` NestJS app beside `custom_ecommerce_build/`, `mobile/` and `packages/core/`. The web app does not move. |
 | How does it talk to the database? | **Prisma 7 + `@prisma/adapter-pg`, unchanged**, through Neon's **pooled** endpoint with an explicitly sized pool. Migrations keep using the direct endpoint, and run from the API pipeline only. |
-| Where does it run? | A long-running container in **AWS us-east-1**, the same region as the database. At least two instances. |
+| Where does it run? | **Render** (decided 2026-09-15): a web service in Render's **Virginia (US East)** region, the region nearest Neon's aws-us-east-1. At least two instances. |
 | How do we avoid breaking things? | Strangler cutover. Nest serves the **same `/api/*` contract**; the web app flips endpoints to it one group at a time with rewrites; the payment path moves last. A contract parity suite has to pass against both implementations before each flip. |
 | What does Next.js keep? | Rendering, `proxy.ts` hostname routing, Clerk session UI, SEO. **No database URL, no Paystack or Cloudinary secret.** |
 | Rough size | ~5–6 engineer-weeks, in seven phases. |
 
-**One blocker before any of it:** neither `custom_ecommerce_build/` nor the
-workspace root is a git repository. A migration that deletes route handlers as
-it goes needs history and a revert button. Phase 0 starts there.
+**Git — done 2026-09-14.** Baseline `461ec2b`, remote
+`github.com/NazaAdimoha/Trevaly` (public). `main` and `fix/audit-followups`
+pushed 2026-09-15.
+
+### Status — 2026-09-15: all backend functionality is in the API (locally)
+
+The owner asked for the whole backend to move at once rather than one group
+per phase. Phases 2–5 were therefore done together, with the phase gates
+replaced by one stronger gate run **before** web was changed: every endpoint
+compared request by request against the running Next implementation.
+
+**What moved**
+
+| | Before | Now |
+| --- | --- | --- |
+| 37 route handlers (24 files) | `custom_ecommerce_build/src/app/api` | `api/src/modules/*` — web's copies deleted |
+| Storefront, dashboard and sitemap reads | Server Components querying Prisma | `@/lib/server-api` → `/api/storefront/:slug/…`, `/api/me`, `/api/stores/:slug` |
+| Custom-domain lookup in `proxy.ts` | Prisma | `GET /api/internal/domains/:host` (internal key), same LRU |
+| Operator scripts (`grant:admin`, `grant:store`, `check:paystack`, `sync:core`) | web | `api/scripts` |
+| Prisma, `pg`, database URL, Paystack and Cloudinary secrets | web | API only. ESLint now fails any `@prisma/*`, `pg` or generated-client import in web. |
+
+`proxy.ts` forwards every `/api/*` request to `API_ORIGIN`, placing a store's
+slug in the path for checkout and coupon preview, and stamping the internal
+key, client IP and original host. `/api/internal/*` is refused at the proxy.
+Web's browser client sends the Clerk token as a Bearer header; mobile calls the
+API directly on port 4000.
+
+**Evidence**
+
+| Check | Result |
+| --- | --- |
+| Contract parity, Next vs Nest, real Clerk sessions, same database (`api/test/parity.live.test.ts`) | 30/30 — every endpoint, access rule, validation message, conflict, Paystack initialization and webhook outcome |
+| Storefront pages rendered through the API vs snapshots from the Prisma version | 11/11 identical: status, title, meta, canonical, JSON-LD, visible text, `sitemap.xml`, `robots.txt` |
+| Playwright checkout suite through web → proxy → API, real Paystack test charges | 7/7 |
+| Every dashboard page as merchant and as SUPER_ADMIN, in a browser | all API calls 2xx; non-member 404; merchant → unauthorized on platform pages |
+| Webhook through the proxy with a whitespace-heavy signed body | verifies (raw bytes intact); tampered signature 401 |
+| Custom domain through the internal lookup | verified domain serves its store; unverified shows not-found |
+
+The parity suite can no longer run against this tree — web has no routes to
+compare. To re-run it, check out `a6281cc` for web and run the API from HEAD.
+
+**Found and fixed by the comparison**
+
+1. Searching orders by phone number returned 500 on web: the digits were also
+   tried as an order number beyond Postgres `integer`. Fixed in the API.
+2. The order confirmation page shipped the customer's **full email** in the
+   page source; only the display was masked (security audit finding 6). The
+   API now returns only the masked address.
+3. The edit-product page never received a product's variants.
+4. `/api/internal/*` was reachable through the public proxy with the proxy's
+   own key attached. Now refused at the proxy.
+
+**Deliberate differences from web**
+
+- Paystack and Cloudinary calls time out (20 s / 30 s) instead of relying on
+  Vercel's function limit.
+- JSON body limit 2 MB, and an oversized body is 413, not 500.
+- `POST /api/checkout` on the platform host is 404 (was 400 "Missing tenant
+  context"); checkout exists only per store.
+- Rate limits are shared across instances when `REDIS_URL` is set (closes audit
+  finding 8 once Key Value exists).
+
+**Still to do — needs the owner's accounts**
+
+1. Render: create the Blueprint, set the secrets it prompts for, measure the
+   Virginia → Neon round trip, confirm `TRUST_PROXY_HOPS`.
+2. Vercel (web): set `API_ORIGIN` and `INTERNAL_API_KEY`; remove
+   `DATABASE_URL`, `DIRECT_URL`, `PAYSTACK_SECRET_KEY`, `CLOUDINARY_API_KEY`,
+   `CLOUDINARY_API_SECRET` and `CLOUDINARY_CLOUD_NAME` from its environment.
+   `CRON_SECRET` must match on both until the Render Cron Job replaces Vercel
+   Cron.
+3. Mobile release build: `EXPO_PUBLIC_API_BASE_URL` → the API's public URL.
+4. The Paystack webhook URL can stay on the web domain (the proxy forwards it
+   byte for byte) or move to the API host directly.
+
+Rollback is a web redeploy of the previous build: that build still has its own
+routes and database access.
 
 ---
 
@@ -60,19 +134,21 @@ Around it:
 
 ### Inventory — every piece of server logic that has to move
 
-36 HTTP operations across 23 API route files, 19 Server Components and route
+37 HTTP operations across 24 API route files, 20 Server Components and route
 handlers that query the database directly, and one database lookup inside
-`proxy.ts`.
+`proxy.ts`. (36 / 23 / 19 when this plan was written. The additions are
+`GET /api/platform/webhook-events` and its page, whose only database read is the
+`requirePlatformAdmin` role check.)
 
 #### A. The money path (highest blast radius)
 
 | Operation | Auth | What it does | Called by |
 | --- | --- | --- | --- |
-| `POST /api/checkout` | Public; tenant from `x-tenant-slug` set by proxy | Re-prices every line from the DB, including variants. Validates the delivery zone and coupon. Increments `orderSequence` and creates the order in one transaction. Snapshots the platform fee. Calls Paystack initialize, and cancels the order if that fails. Rate limit: 8/min per IP per tenant. | Storefront checkout |
+| `POST /api/checkout` | Public; tenant from `x-tenant-slug` set by proxy | Re-prices every line from the DB, including variants. Validates the delivery zone and coupon; a rejected coupon gets the one uniform `COUPON_NOT_APPLICABLE` message whatever the reason. Increments `orderSequence` and creates the order in one transaction. Snapshots the platform fee. Calls Paystack initialize, and cancels the order if that fails. Rate limit: 8/min per IP per tenant. | Storefront checkout |
 | `POST /api/payments/verify` | Public, reference only | `verifyAndFulfillOrder()`; 202 when not yet verifiable | Order confirmation page |
 | `POST /api/webhooks/paystack` | HMAC-SHA512 over the **raw** body | Persists a `WebhookEvent` first (upsert on provider + event id). Handles `charge.success`, `charge.failed`, `refund.processed`, `charge.dispute.create` and `charge.dispute.resolve`. Returns **500 on failure** so Paystack retries. | Paystack |
 | `GET /api/cron/expire-orders` | `CRON_SECRET` bearer | Cancels PENDING orders more than 24h old with no `paymentVerifiedAt` | Vercel Cron, daily 03:00 |
-| `POST /api/coupons/preview` | Public; 10/min | Uniform valid/invalid answer | **No caller found** in web or mobile |
+| `POST /api/coupons/preview` | Public; 10/min | Uniform valid/invalid answer via `publicCouponRejection` (core) — the same function checkout uses | Storefront checkout — the coupon field's **Apply** button |
 
 #### B. Store admin — every call goes through `authorizeStore(slug)`
 
@@ -94,8 +170,9 @@ handlers that query the database directly, and one database lookup inside
 | --- | --- | --- | --- |
 | `GET /api/app/config` | Public | Minimum-version gate and feature flags; `Cache-Control: public, max-age=60, s-maxage=300` | Mobile |
 | `GET /api/me/stores` | Signed in | Memberships with `storefrontUrl` and `logoUrl` | Mobile |
-| `GET /api/platform/banks` | SUPER_ADMIN | Paystack bank list, de-duplicated by code | **No caller** (the onboarding page loads banks server-side) |
-| `GET /api/platform/tenants` | SUPER_ADMIN | Tenant estate | **No caller** (the platform page reads the DB directly) |
+| `GET /api/platform/banks` | SUPER_ADMIN | Paystack bank list, de-duplicated by code; `Cache-Control: private, max-age=3600` | Onboarding form (client fetch) |
+| `GET /api/platform/tenants` | SUPER_ADMIN | Tenant estate, with `storefrontUrl` resolved by `tenantOrigin` | Tenants list at `/dashboard/platform/tenants` |
+| `GET /api/platform/webhook-events` | SUPER_ADMIN | Webhook deliveries with per-status counts. **Never returns `payload`** (shopper email, card metadata). | Webhook events page |
 | `POST /api/platform/tenants` | SUPER_ADMIN | Resolve account (a 429 is tolerated) → create subaccount → **only then** write the Tenant | Onboarding form |
 
 #### D. Database reads outside `/api` — the part that is easy to miss
@@ -106,15 +183,16 @@ handlers that query the database directly, and one database lookup inside
 | `app/sites/_tenant.ts` | Public tenant by slug, wrapped in React `cache()` |
 | Storefront layout, home, category, product, checkout, order confirmation, `sitemap.xml`, `robots.txt` | Tenant, categories, products + variants (first 60), delivery zones, order by reference, sitemap slugs |
 | Dashboard layout | The signed-in user's `PlatformUser` role |
-| Dashboard home, platform estate, onboarding | `listMyStores`, every tenant, `listBanks` |
+| Dashboard home | `listMyStores` |
+| Platform tenants, webhook events, onboarding pages | `requirePlatformAdmin` role check only — the tenant list and bank list now come from the API |
 | Store layout and the overview, product detail, product edit, settings, coupons and delivery-zones pages | `requireTenantMember`, `getStoreOverview`, product by id, `tenantOrigin` |
 
 #### Who calls what
 
 | Client | Transport today | Endpoints |
 | --- | --- | --- |
-| Web dashboard (client views) | Same-origin axios + Clerk cookie | Products, import, categories, coupons, delivery zones, settings, upload signature, platform tenants POST |
-| Storefront browser | Same-origin axios, tenant from hostname | `checkout`, `payments/verify` |
+| Web dashboard (client views) | Same-origin axios + Clerk cookie | Products, import, categories, coupons, delivery zones, orders list/detail/PATCH, settings, upload signature, platform tenants GET/POST, platform banks, platform webhook events |
+| Storefront browser | Same-origin axios, tenant from hostname | `checkout`, `payments/verify`, `coupons/preview` |
 | Mobile app | `Authorization: Bearer <Clerk token>` + `X-App-Version` | `app/config`, `me/stores`, `overview`, `orders` list/detail/PATCH, `products` list/POST, `settings` GET/PATCH, `uploads/signature` |
 | Paystack | Signed POST | `webhooks/paystack` |
 | Vercel Cron | Bearer `CRON_SECRET` | `cron/expire-orders` |
@@ -176,9 +254,9 @@ flowchart LR
   subgraph vercel[Vercel]
     NX[Next.js<br/>proxy.ts · RSC · SEO]
   end
-  subgraph aws[AWS us-east-1]
+  subgraph render[Render · Virginia US East]
     API[NestJS API<br/>2+ instances]
-    RD[(Redis<br/>rate limits)]
+    RD[(Render Key Value<br/>rate limits · domain cache)]
   end
   PG[(Neon Postgres 17<br/>pooler → compute)]
   PS[Paystack]
@@ -360,22 +438,38 @@ before the API deploy that needs them.
 
 ### 3.3 Put Nest in the same region as the database
 
-The database is in **aws-us-east-1**. Deploy Nest there too.
+The database is in **aws-us-east-1**. Nest runs on **Render** (owner's
+decision, 2026-09-15) in Render's **Virginia (US East)** region, the nearest of
+its five (Oregon, Ohio, Virginia, Frankfurt, Singapore).
 
 A Lagos user's trip to the API happens once per request. The API's trip to the
 database happens once per *query*. A checkout issues about ten queries plus a
 transaction, and a cross-region hop of 100–200 ms on each would add more than a
-second. Vercel's default function region (`iad1`) is also us-east-1, so
-Server Component → API calls stay in-region.
+second. Vercel's default function region (`iad1`) is also US East, so
+Server Component → API calls stay close.
 
-**Hosting requirements**, whichever provider (Railway, Render, Fly or AWS
-ECS/App Runner; pick the one the team already operates):
+**Verify the database round trip before creating production services.**
+Render's docs do not say which cloud or data centre backs each region, so
+"nearest" is an inference, not a guarantee — and Render does not allow changing
+a service's region after it is created. In Phase 1, deploy a throwaway service
+in Virginia that runs `SELECT 1` against Neon's pooled endpoint 200 times and
+reports p50/p95. Expect single-digit milliseconds; if it is tens, stop and
+reconsider before anything permanent is built there.
 
-- A us-east-1 region.
-- At least 2 instances with health-checked rolling deploys.
-- A load-balancer request timeout of **120 s or more**, because a 500-row
-  import that fetches images through Cloudinary runs synchronously today.
-- Managed Redis, or Upstash, reachable in-region.
+**What Render provides for the requirements below** (from Render's docs):
+
+| Requirement | On Render |
+| --- | --- |
+| At least 2 instances, health-checked rolling deploys | Manual or auto scaling. With several instances Render deploys one at a time, and cancels and reverts the whole deploy if a new instance fails its health check. Set `healthCheckPath: /api/health` — a readiness check that touches Postgres and Key Value, not just the port. |
+| Migrations from the API pipeline only | **Pre-deploy command** `prisma migrate deploy` (runs after the build, before instances roll, on a separate instance). Paid instance types only. Migrations still have to be backward compatible (3.5), because the old instances keep serving while it runs. |
+| Graceful shutdown | `maxShutdownDelaySeconds` in `render.yaml`, with Nest's `enableShutdownHooks()` draining requests and closing the `pg` pool. |
+| Redis in-region | **Render Key Value** in Virginia, on the region's private network. Services in different regions cannot use it privately. |
+| Scheduled jobs | A **Render Cron Job** calling `/api/jobs/expire-orders` replaces Vercel Cron in Phase 4 step 5. |
+| Infrastructure as code | A `render.yaml` Blueprint in the repo for the API, Key Value and cron. |
+| Request timeout of **120 s or more** (a 500-row import that fetches images through Cloudinary runs synchronously today) | **Verify in Phase 1** — not confirmed from Render's docs. If it is shorter, the import moves to a background worker before Phase 3. |
+
+Postgres traffic goes Render → Neon over the public internet with TLS
+(`sslmode=require`); Neon is not on Render's private network.
 
 ### 3.4 Neon plan and compute
 
@@ -472,16 +566,20 @@ Each needs an explicit decision, and the parity suite checks every one.
 | 3 | JSON body parsed before the handler | The webhook HMAC covers the **raw bytes** | `NestFactory.create(AppModule, { rawBody: true })`; the webhook reads `req.rawBody`. Re-serialized JSON fails the signature, and **every webhook would return 401** |
 | 4 | `POST` returns 201 | Checkout, verify, preview, import and signature return 200 (verify can also return 202 or 404); resource creates return 201; product DELETE returns 204 | `@HttpCode()` on every route, with no reliance on defaults |
 | 5 | `ClassSerializerInterceptor` in many templates | Plain `JSON.stringify` (Decimal → `"1.00"`, Date → ISO) | Return plain objects and register no serializer |
-| 6 | A redirect or HTML on auth failure (common in Passport setups) | 401 JSON; store 404; platform 403 | Verify Clerk sessions with the official Express SDK (`@clerk/express`), which accepts both the Bearer header and the `__session` cookie. Set `authorizedParties` to the platform origin. Guards throw, never redirect. |
+| 6 | A redirect or HTML on auth failure (common in Passport setups) | 401 JSON; store 404; platform 403 | Verify Clerk sessions with the official Express SDK (`@clerk/express`), which accepts both the Bearer header and the `__session` cookie. Guards throw, never redirect. **Corrected in Phase 1:** do *not* set Clerk's `authorizedParties`. In `@clerk/backend` 3.17.2 it rejects any token with no `azp` claim, and the Expo app's tokens have none, so every merchant would be signed out of the app. Web does not set it either. `ClerkAuthGuard` instead refuses a token whose `azp` names an origin outside `CLERK_AUTHORIZED_PARTIES`, and accepts a token with no `azp` as web does. |
 | 7 | Throttler storage in memory | In memory per serverless instance (audit finding 8, open) | A Redis-backed fixed window with the same keys and limits, **which closes finding 8** |
 | 8 | `req.ip` is the load balancer | Leftmost `x-forwarded-for`, trusted because Vercel overwrites it | Set `trust proxy` to the host's real hop count. For requests that arrive through the Vercel rewrite, see Phase 4's IP check. |
 | 9 | No cache headers | `app/config` and `banks` set `Cache-Control` | Set the same headers explicitly |
 | 10 | `req.hostname` is the API's host | Checkout's Paystack `callback_url` uses the **storefront origin** the customer is on | `proxy.ts` forwards the original host. Nest accepts it only if it is this tenant's subdomain or its verified custom domain, and otherwise falls back to `tenantOrigin(tenant)`. |
-| 11 | Scheduled jobs run on every instance | One Vercel Cron call | Keep a single external scheduler calling `/api/jobs/expire-orders`. The job is idempotent, but running it once is simpler to reason about than a cron on each instance. |
+| 11 | Scheduled jobs run on every instance | One Vercel Cron call | Keep a single external scheduler — a Render Cron Job — calling `/api/jobs/expire-orders`. The job is idempotent, but running it once is simpler to reason about than a cron on each instance. |
 
 ### Auth, precisely
 
 - **`ClerkAuthGuard`**: no valid session → `401 { error: 'Not signed in' }`.
+  Verification runs inside the guard, not as global `clerkMiddleware`. Global
+  middleware would put the identity provider in front of the Paystack webhook
+  and the health check, so a Clerk outage could fail payment webhooks and pull
+  healthy instances out of rotation.
 - **`StoreMemberGuard`** reproduces `authorizeStore()` exactly:
   1. Look up a `TenantUser` by `clerkUserId` and the `:storeSlug` param.
   2. Failing that, **any** `PlatformUser` acts as `OWNER` on an existing store.
@@ -524,8 +622,8 @@ hostname-derived slug placed in the path.
 
 ### Phase 0 — Safety net · ~3 days
 
-1. **Put the workspace under git.** Commit the current state as the baseline
-   everything is diffed against.
+1. ~~**Put the workspace under git.**~~ **Done 2026-09-14** — baseline
+   `461ec2b`; push pending owner authentication.
 2. **Create a Neon `staging` branch** and point a staging deploy of the current
    web app at it.
 3. **Build the contract parity suite** (Part 6.1) and run it green against the
@@ -541,8 +639,10 @@ hostname-derived slug placed in the path.
 
 - Scaffold `api/` with `config/`, `database/` (pooled, explicit pool), `auth/`,
   `common/`, a health endpoint, structured logs with request ids, and Redis.
-- Resolve `@core/*` from source in both `nest build` and the test runner. (This
+- Resolve `@core/*` from source in both the build and the test runner. (This
   is the sixth tool to learn the alias; `MOBILE_PLAN` records the other five.)
+  The build is `tsc` + `tsc-alias`, not `nest build`: the Nest 12 CLI needs
+  Node ≥ 22.22.3.
 - Move `prisma/` into `api/prisma/` with the two generator blocks, then confirm
   `prisma migrate status` reports no drift against production.
 - Move the inline route schemas into `packages/core`. While doing it, reconcile
@@ -551,10 +651,71 @@ hostname-derived slug placed in the path.
 - Replace web's 16 imports of `@/generated/prisma/enums` with `@core/enums`.
   This removes web's build-time dependency on Prisma generation early.
 - Port `tenantDb` and `tenant-isolation.test.ts`, and run them on a Neon branch.
-- Deploy to staging in us-east-1 and ship `GET /api/app/config`.
+- Add a `render.yaml` Blueprint: the API web service (Virginia, 2 instances,
+  `healthCheckPath`, pre-deploy `prisma migrate deploy`,
+  `maxShutdownDelaySeconds`), a Key Value instance, and the cron job.
+- Measure the Render Virginia → Neon round trip (3.3) **before** creating the
+  production service, and confirm Render's request timeout.
+- Deploy to staging on Render and ship `GET /api/app/config`.
 
 **Exit:** isolation test green in `api/`; `app/config` passes parity; staging
-has two instances behind a health check.
+has two instances behind a health check; the measured p95 database round trip
+is recorded here.
+
+#### Phase 1 progress — 2026-09-15
+
+**Done and verified locally** (branch `fix/audit-followups`):
+
+| Item | Evidence |
+| --- | --- |
+| `api/` on Nest 12 + Express 5, CommonJS, `@core` compiled from source | `tsc` clean; build output starts |
+| `config/`: Zod env, refuses to boot | Production without `REDIS_URL` exits 1 listing the setting name only. A blank `KEY=` counts as unset. |
+| `database/`: pooled `PrismaService`, ported `tenantDb` | Diff against web's `tenant-db.ts` is the added `prisma` parameter only |
+| `prisma/` moved to `api/prisma/`, two generators | `migrate status`: up to date, 7 migrations, no drift. Web still passes tsc, tests, build and lint. |
+| `common/`: `ApiException`, `ApiExceptionFilter`, `ZodPipe`, request id + JSON logs | `test/app.test.ts` |
+| `auth/`: the three guards, `@CurrentUser`, `@CurrentStore` | `test/guards.live.test.ts` against **real Clerk sessions** (member, non-member, SUPER_ADMIN; sessions revoked afterwards); `clerk-auth.guard.spec.ts` for the `azp` rule |
+| Tenant isolation ported | `test/tenant-isolation.test.ts`, all 12 assertions, real database |
+| `GET /api/health` (readiness) | 200 when healthy; **503** with Key Value unreachable |
+| `GET /api/app/config` | **Byte-identical body** and identical `Cache-Control` to the running Next route. Only difference: `Content-Type` adds `; charset=utf-8`. |
+| Unauthenticated store route | Web and Nest both return `401 {"error":"Not signed in"}`, with no token and with a forged one |
+| `render.yaml` | Build script run on a clean copy with no `node_modules`, generated client or `dist`; started with Render's start command; health 200 |
+
+The API suite (43 tests) passed three consecutive runs.
+
+**Found while building — changes to this plan:**
+
+1. **`authorizedParties` would lock out the mobile app.** Part 4, row 6, above.
+2. **Render cannot build from `rootDir: api`.** Render's monorepo docs: "Files
+   outside your service's root directory are not available to the service at
+   build time or at runtime." The API compiles `packages/core`, so the Blueprint
+   builds from the repo root and uses `buildFilter` paths for monorepo scoping.
+3. **Render's default Node for new services is 24.14.1.** With no version
+   pinned, it reads the first `package.json` it finds in a subdirectory.
+   `render.yaml` pins `NODE_VERSION=22.22.0`, the major the API is tested on.
+   `engines` now has an upper bound.
+4. **Nest's default JSON body limit is body-parser's 100 KB**, and a 500-row
+   import with descriptions is larger. Web's route handlers have no limit. Set
+   to 2 MB, and an oversized body now returns `413 {error}`, not a 500.
+5. **The first database connection must happen at boot.** From a cold pool,
+   TLS plus waking Neon took longer than the health check's 2-second budget, so
+   a healthy new instance would fail its first check mid-deploy. `PrismaService`
+   now connects before the app listens, retrying up to three times.
+6. **Connection resets were invisible.** The pg adapter keeps a dropped
+   connection from crashing the process but reports it only to `debug`. The
+   API now logs both callbacks, and TCP keepalive is on.
+
+**Still open in Phase 1:**
+
+- Move the inline route schemas into `packages/core` and reconcile the two
+  coupon update schemas.
+- Replace web's imports of `@/generated/prisma/enums` with `@core/enums`.
+- **Needs the owner's Render account:** create the Blueprint, deploy staging,
+  measure the Virginia → Neon p50/p95 (3.3), and confirm Render's request
+  timeout.
+- **Verify `TRUST_PROXY_HOPS=1` on Render** with a request that echoes
+  `req.ip` and `x-forwarded-for`. It is inferred, not documented. If it is
+  wrong, rate limits key on the load balancer's address.
+- Set `autoDeployTrigger` to `checksPass` once CI exists (Phase 0).
 
 ### Phase 2 — Read-only endpoints · ~4 days
 
@@ -590,8 +751,9 @@ every form.
 
 Ordered so that each step can be rolled back independently.
 
-1. **Coupon preview.** Port it (it has no caller yet), and move coupon
-   evaluation into one `promotions` service shared with checkout.
+1. **Coupon preview.** Port it (the checkout Apply button calls it now), and
+   move coupon evaluation into one `promotions` service shared with checkout.
+   Keep `publicCouponRejection` as the only thing either returns to a shopper.
 2. **Checkout and verify.** `proxy.ts` rewrites `/api/checkout` to
    `${API_ORIGIN}/api/storefront/{slug}/checkout` and `/api/payments/verify` to
    Nest. Before the flip, confirm the real client IP reaches Nest through a
@@ -602,8 +764,8 @@ Ordered so that each step can be rolled back independently.
    then run the full E2E suite, a refund and a dispute.
 4. **Webhook, live mode.** Change the live webhook URL, then place one real
    low-value transaction and refund it.
-5. **Scheduled job.** Point the scheduler at `/api/jobs/expire-orders` and
-   remove the cron from `vercel.json`.
+5. **Scheduled job.** Create the Render Cron Job for `/api/jobs/expire-orders`
+   and remove the cron from `vercel.json`.
 
 **Why the two implementations can safely overlap.** Idempotency lives in the
 **database**, not in either codebase:
@@ -726,7 +888,7 @@ handlers deleted.
 | Custom-domain lookup adds a hop | Slower first hit per domain per instance | The LRU stays in `proxy.ts`; subdomains need no lookup |
 | Paystack callback lands on the API host | Customers on the redirect flow see a JSON page | Forward and validate the storefront origin (Part 4, row 10) |
 | Import exceeds the load-balancer timeout | A partially imported catalogue | Timeout of 120 s or more; verify in Phase 3; a background job later |
-| Nest far from the database | Checkout slows by more than a second | us-east-1, beside Neon |
+| Nest far from the database | Checkout slows by more than a second | Render Virginia beside Neon's us-east-1, with the round trip measured before the region is committed (it cannot be changed later) |
 
 ---
 
@@ -753,33 +915,93 @@ becomes straightforward once Nest exists:
 
 ## Part 9 — Noticed while reading (not blockers)
 
-- **The dashboard sidebar links to a page that does not exist.**
-  `storeMenu` links to `/dashboard/stores/:slug/orders`, but there is no orders
-  page under `app/(platform)`, so the link 404s. Orders are only manageable
-  from the mobile app today.
-- **`invalidateDomain` in settings PATCH does not do what its comment says.**
-  The domain cache maps hostname → slug only, so a name or logo change never
-  needed invalidating. On serverless it also clears just one instance.
-- **Checkout is a coupon oracle.** Preview deliberately returns one uniform
-  answer, but checkout returns "expired", "fully used" and "Coupon not found"
-  separately. It is rate limited (8/min), so this is low severity, but it is
-  the exact distinction preview was designed to hide.
-- **Three endpoints have no caller**: `coupons/preview`, `platform/banks` and
-  `GET platform/tenants`. Port them for completeness, and test them less
-  heavily than live paths.
-- **Duplicate coupon update schemas**, as noted in Phase 1.
+Status as of 2026-09-14. Fixes are on branch `fix/audit-followups`.
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 1 | **Store sidebar → Orders 404'd.** No orders page existed under `app/(platform)`, so orders were manageable only from the phone. | **Fixed.** `/dashboard/stores/:slug/orders` and `/orders/:id` — search, status and needs-attention filters, pagination, status changes from `nextStatuses`, internal note, and the dispute / refund / stock-issue / failed-payment banners. Status dialogs state what the change does *not* do (no transition moves money). |
+| 2 | **Operator sidebar — both links 404'd** (Tenants, Webhook Events). Not in the original list; found while fixing #1. | **Fixed.** Tenants list moved to `/dashboard/platform/tenants` (where the sidebar pointed; `/dashboard/platform` redirects). New `/dashboard/platform/webhook-events` over a new `GET /api/platform/webhook-events`. `navigation.test.ts` now fails if any sidebar link has no page. |
+| 3 | **Three endpoints had no caller.** | **Fixed by giving them callers**, not by deleting them — the end state of this plan is a Next.js with no database URL and no Paystack secret, so these are the copies that survive. `coupons/preview` → checkout's Apply button (shoppers now see the discount before Paystack opens). `platform/tenants` GET → tenants list (it duplicated the page's server query exactly). `platform/banks` → onboarding form, fetched client-side; the page no longer calls Paystack. |
+| 4 | **Checkout was a coupon oracle.** | **Fixed.** `publicCouponRejection` + `COUPON_NOT_APPLICABLE` in `packages/core/src/validation/coupon.ts`, used by both checkout and preview. "Below minimum" is uniform too — otherwise a one-item cart enumerates live codes. Verified against the running app: five failure kinds (nonexistent, expired, used up, inactive, below minimum) → one identical response from each endpoint. |
+| 5 | **`invalidateDomain` in settings PATCH did nothing useful.** | **Removed**, with a comment saying why. The domain cache holds hostname → slug only; the route cannot change either; the storefront reads the tenant through per-request React `cache`, so name and logo changes are live on the next request. If the route ever changes `slug` or `customDomain`, invalidation belongs there — and needs Redis to reach every instance. |
+| 6 | **Money displayed 100× too small** on delivery areas (₦1,500 fee shown as ₦15.00) and coupons (₦500 off shown as ₦5.00). `formatCurrency` takes kobo; both pages divided by 100 first. Stored values were correct. Found while wiring the checkout discount. | **Fixed.** `money-usage.test.ts` fails on any `formatCurrency(... / 100)`, and was checked against the baseline commit to confirm it catches both. |
+| 7 | **A payment that lands on a cancelled order was silently dropped.** `verifyAndFulfillOrder` returned early for any order that was not PENDING. Paystack still captured and settled the money; nothing was recorded. Reachable when a merchant cancels a PENDING order, or when `expireStaleOrders` cancels one after 24 h and a slow bank transfer confirms later. | **Fixed — record and flag** (owner's decision, 2026-09-15). The order stays CANCELLED; the payment is recorded (`paidAmountKobo`, `paymentVerifiedAt`), `paidAfterCancellation` is raised, and the platform earning is written. No stock taken, no coupon use counted. Handled on both paths — the early return and the race where a cancellation lands between read and claim. A full refund clears the flag. Surfaced in the web and app order screens, the needs-attention filter and overview count, the app's notifications, and the customer's confirmation page ("Your payment went through"). Verified with a real Paystack test-mode charge on a cancelled order, plus the full E2E suite. |
+| 8 | **Duplicate coupon update schemas**, as noted in Phase 1. | Open — Phase 1. |
 
 ---
 
 ## Part 10 — Decisions for you
 
+Answered by the owner on 2026-09-14: "yes to all the decisions".
+
 1. **Nest host** in us-east-1: whichever of Railway, Render, Fly or AWS
    ECS/App Runner the team will actually operate. The requirements are in 3.3.
+   **Decided 2026-09-15: Render**, Virginia (US East) region. See 3.3 for what
+   that means and the latency check to run first.
 2. **Neon plan upgrade**, autoscaling and no scale-to-zero, before Phase 4.
-   *Recommend: yes.*
+   **Approved.**
 3. **Redis provider**: Upstash, or the host's managed Redis.
-   *Recommend: whichever is in-region with the API.*
+   **Approved: whichever is in-region with the API** — so **Render Key Value**
+   in Virginia.
 4. **Storefront transport**: a same-origin proxy rewrite, or direct CORS.
-   *Recommend: the rewrite* (Part 2).
+   **Approved: the rewrite** (Part 2).
 5. **First mobile store build targets the API host directly.**
-   *Recommend: yes*, so no legacy web-host builds exist to support.
+   **Approved.**
+6. **Late payment on a cancelled order** (Part 9 #7): **record and flag**
+   (decided 2026-09-15; implemented).
+
+---
+
+## Part 11 — Applying `BACKEND_OPTIMIZATIONS.md`
+
+The workspace-root folder `BACKEND_OPTIMIZATIONS.md/` holds chapter notes on
+rate limiting, payment systems, scaling, notifications, digital wallets and
+maps. (Their `./images/*.png` references point at files that are not in the
+folder.) What each means for this plan, stated against what the code does today:
+
+### Rate limiter
+
+| Practice | Here today | Action |
+| --- | --- | --- |
+| Centralised counter store (Redis) | Per-process `Map`. On serverless the effective limit is the configured limit × warm instances, and it resets on cold start. | **Phase 1:** move `lib/rate-limit` to Render Key Value before running two Nest instances. |
+| Sliding-window counter | Fixed-window style `Map` | Implement the sliding-window counter atomically (Lua or `INCR` + `EXPIRE` in one `MULTI`). |
+| Tell clients when to retry | `Retry-After` on 429 already | Add `X-RateLimit-Remaining`. |
+| Key on the real client | IP + tenant | The `x-client-ip` stamping in Phase 4 step 2, or every shopper behind the rewrite shares one bucket. |
+| Monitor | Nothing | Count 429s per route; alert on spikes on checkout and preview. |
+
+### Payment system
+
+| Practice | Here today | Action |
+| --- | --- | --- |
+| Exactly-once via unique constraints | **Yes.** `WebhookEvent` upsert on (provider, event id), unique `PlatformEarning.orderId`, conditional PENDING → PAID claim. | Port unchanged (Phase 4). |
+| Idempotency key on the pay-in request | **No.** A double submit or a refresh creates a second PENDING order and Paystack transaction. | Add `Idempotency-Key` to `POST /checkout` in the Nest port, stored with a unique constraint. |
+| Retry queue + dead-letter queue | Paystack retries on our 500; FAILED rows are kept. **Now visible** at `/dashboard/platform/webhook-events`. | **Phase 4:** an operator *replay* action on a FAILED event (safe because fulfilment is idempotent). |
+| Nightly reconciliation against the PSP | **None.** | **New, Phase 4 exit:** compare Paystack transactions and settlements with Orders and PlatformEarnings; flag mismatches. It is the backstop for Part 9 #7 and for any webhook that never arrived. |
+| Handle slow payments with a pending state | Yes — the confirmation page's `pending` state. | Keep. Note the 24 h sweep assumes transfers confirm within a day; reconciliation should check before cancelling. |
+| Double-entry ledger | Not needed. We never hold funds; Paystack splits at settlement. | None — see Digital wallet. |
+
+### Scaling
+
+| Practice | Here today | Action |
+| --- | --- | --- |
+| Stateless web tier | The rate limiter and the domain LRU are per-instance memory. | Both into Redis before horizontal scaling (Phase 1–2). This is also why settings PATCH can never invalidate the domain cache correctly from one instance. |
+| Cache with expiry and a consistency plan | Domain cache: 5 min positive, 30 s negative, failures never cached. | Keep the TTLs in Redis; invalidate on domain attach/detach. |
+| CDN for static assets | Cloudinary delivers every image. | None. |
+| Database replication | Single Neon primary. | After Phase 5, consider a Neon read replica for storefront reads. |
+
+### Notification system — for MOBILE_PLAN Phase 4 (push)
+
+| Practice | Action |
+| --- | --- |
+| Deduplicate | Notification log keyed on (order id, event type), so a webhook redelivery never notifies twice. |
+| Retry with backoff; keep failures | Queue sends; record provider errors; drop dead device tokens. |
+| Respect the user | Per-merchant opt-out and quiet hours. |
+| Send outside the money transaction | Already required by MOBILE_PLAN; never inside the fulfilment transaction. |
+
+### Not applicable, deliberately
+
+- **Digital wallet** (event sourcing, TC/C, sagas): the platform holds no
+  balance. Adopting a wallet would contradict the architecture and the
+  marketing site's central promise.
+- **Maps**: delivery zones are named areas with flat fees. Geocoding an address
+  to suggest a zone is a possible later feature, not part of this migration.

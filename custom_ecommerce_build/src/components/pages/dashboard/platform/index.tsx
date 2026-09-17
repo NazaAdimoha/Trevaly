@@ -1,7 +1,12 @@
+'use client';
+
 import Link from 'next/link';
+import useSWR from 'swr';
+
+import { apiFetcher } from '@/lib/api';
 
 import ROUTES from '@/constant/routes';
-import type { TenantStatus } from '@/generated/prisma/enums';
+import type { TenantStatus } from '@core/enums';
 
 type PlatformTenant = {
   id: string;
@@ -12,6 +17,7 @@ type PlatformTenant = {
   paystackSubaccountCode: string | null;
   platformFeePercent: string;
   createdAt: string;
+  storefrontUrl: string;
   _count: { products: number; orders: number };
 };
 
@@ -47,19 +53,31 @@ function SettlementCell({ tenant }: { tenant: PlatformTenant }) {
   );
 }
 
-export default function PlatformTenantsView({
-  tenants,
-}: {
-  tenants: PlatformTenant[];
-}) {
+/**
+ * Every store on the platform.
+ *
+ * Reads through `GET /api/platform/tenants` rather than querying Prisma in the
+ * page. That endpoint existed with no caller, while this screen ran the
+ * identical query server-side — two copies of one read. The migration plan ends
+ * with Next.js holding no database URL, so the API copy is the one that
+ * survives; this makes it the only one.
+ */
+export default function PlatformTenantsView() {
+  const { data, error, isLoading } = useSWR<{ tenants: PlatformTenant[] }>(
+    '/platform/tenants',
+    apiFetcher,
+  );
+  const tenants = data?.tenants ?? [];
+
   return (
     <div className='mx-auto max-w-6xl px-6 py-12'>
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-2xl font-semibold'>Tenants</h1>
           <p className='mt-1 text-sm text-gray-600'>
-            {tenants.length} store{tenants.length === 1 ? '' : 's'} on the
-            platform.
+            {data
+              ? `${tenants.length} store${tenants.length === 1 ? '' : 's'} on the platform.`
+              : 'Loading stores…'}
           </p>
         </div>
         <Link
@@ -70,7 +88,13 @@ export default function PlatformTenantsView({
         </Link>
       </div>
 
-      {tenants.length === 0 ? (
+      {error ? (
+        <p role='alert' className='mt-12 text-center text-red-700'>
+          Could not load stores. Refresh to try again.
+        </p>
+      ) : isLoading ? (
+        <p className='mt-12 text-center text-gray-500'>Loading stores…</p>
+      ) : tenants.length === 0 ? (
         <p className='mt-12 text-center text-gray-600'>
           No tenants yet. Onboard the first one.
         </p>
@@ -97,9 +121,14 @@ export default function PlatformTenantsView({
                     >
                       {tenant.name}
                     </Link>
-                    <div className='text-xs text-gray-500'>
-                      {tenant.customDomain ?? `${tenant.slug}.yourbrand.com`}
-                    </div>
+                    <a
+                      href={tenant.storefrontUrl}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='text-xs text-gray-500 hover:underline'
+                    >
+                      {tenant.storefrontUrl.replace(/^https?:\/\//, '')}
+                    </a>
                   </td>
                   <td className='px-4 py-3'>
                     <span

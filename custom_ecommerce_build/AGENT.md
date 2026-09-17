@@ -7,7 +7,12 @@
 ## Project Context
 
 - Stack: Next.js 16 (App Router), React 19, TypeScript (strict), Tailwind CSS 4,
-  Prisma 7 + PostgreSQL (Neon), SWR, Formik, Yup, Zod, Zustand, Radix UI.
+  SWR, Formik, Yup, Zod, Zustand, Radix UI.
+- **Backend: the NestJS API in `../api`** (Prisma 7 + PostgreSQL on Neon). This
+  app has no database, no route handlers of its own and no payment or media
+  secrets. `src/proxy.ts` forwards every `/api/*` request to `API_ORIGIN`;
+  Server Components read through `src/lib/server-api.ts`. ESLint fails any
+  `@prisma/*`, `pg` or generated-client import here.
 - Package manager: pnpm.
 - Auth: **Clerk for identity only.** Tenancy lives in our own `TenantUser`
   table — Clerk Organizations are deliberately not used (see BUILD_PLAN D3).
@@ -37,14 +42,17 @@ env parsing. Never for admin form validation; never use Yup on the server.
 - Type-check: `pnpm typecheck`
 - Test: `pnpm test` · E2E: `pnpm test:e2e`
 - Format: `pnpm format`
-- Prisma: `pnpm db:generate` · `pnpm db:migrate` · `pnpm db:deploy` · `pnpm db:seed`
+- Database, migrations, seeds and operator scripts live in `../api`
+  (`pnpm --dir ../api db:migrate`, `db:generate`, `grant:admin`, …). Local dev
+  needs both: `pnpm --dir ../api dev` (port 4000) and `pnpm dev` (port 3000).
 
 Validation sequence for code changes:
 
 1. `pnpm lint`
 2. `pnpm lint:fix`
 3. `pnpm typecheck`
-4. `pnpm db:generate` (only if `schema.prisma` changed)
+4. `pnpm --dir ../api db:generate` (only if `../api/prisma/schema.prisma`
+   changed — it also copies the enums into `packages/core`)
 
 ## Code Organization
 
@@ -62,15 +70,12 @@ Mirrors the Ceviant back-office convention: thin route files, real work in
 - Formik-bound form fields: `src/components/fields/**`
 - Layout shells: `src/components/Layouts/{Auth,Dashboard,Marketing,Storefront}/**`
 - Shared constants: `src/constant/**` · hooks: `src/hooks/**` · utilities: `src/lib/**`
-- Domain enums: never re-declare. Import from `@/generated/prisma/enums` in
-  anything that can reach the browser — components, and `src/lib/**` modules a
-  client component imports (`validation/tenant.ts` is one). `@/generated/prisma/client`
-  is server-only; pulling it into a client chunk drags the Prisma runtime and
-  fails the build on `node:module`. ESLint enforces this for components only,
-  so the `src/lib` case is on you.
-- Payment logic: `src/lib/payments/**`
-- Server-side Zod schemas: `src/lib/validation/**`
-- Prisma schema: `prisma/schema.prisma` · seed: `prisma/seed.ts`
+- Domain enums: never re-declare. Import from `@core/enums`.
+- Shared validation and domain rules: `packages/core` (`@core/validation/*`,
+  `@core/variants`, `@core/csv`, …) — the same code the API and the mobile app use.
+- Payment logic, tenant scoping, uploads signing: the API (`../api/src/modules/**`).
+  The only payment code here is the browser popup (`src/lib/payments/paystack-popup.ts`).
+- Prisma schema: `../api/prisma/schema.prisma` · seed: `../api/prisma/seed.ts`
 
 Each feature view folder contains:
 
@@ -94,24 +99,26 @@ Each feature view folder contains:
 business's data to another.**
 
 - Every tenant-owned table carries `tenantId` + `@@index([tenantId])`. Never add
-  one without both, and add it to `TENANT_SCOPED_MODELS` in `src/lib/tenant-db.ts`
-  in the same change.
-- **Never import `prisma` directly in `src/app/**` for tenant-owned data.** Use
-  `tenantDb(tenantId)`, which injects the filter automatically. ESLint enforces
-  this via `no-restricted-imports`; the only legitimate overrides are tenant
-  resolution itself, platform-level queries, and webhook logging — each needs an
-  inline disable with a justifying comment.
-- Tenant resolution happens in exactly two places, and both must agree:
-  - `src/proxy.ts` reads the hostname and rewrites storefront requests into
-    `/sites/[tenant]/**`, setting `x-tenant-slug` on the **request** headers.
-  - `src/app/sites/[tenant]/layout.tsx` re-resolves the `Tenant` from the URL
-    segment. Never trust the header alone for anything touching the database.
-- **`x-tenant-slug` is deleted from every inbound request before being set.** An
-  inbound value is always hostile. This applies on every branch of `proxy.ts`,
-  including ones that never set a replacement.
-- Admin authorization always goes through `requireTenantMember(storeSlug)` in
-  `src/lib/auth.ts`. Membership is a database check against the slug in the URL —
-  never a claim read off the session.
+  one without both, and add it to `TENANT_SCOPED_MODELS` in
+  `../api/src/database/tenant-db.ts` in the same change.
+- Tenant-owned queries use `tenantDb(prisma, tenantId)` — in the API. This app
+  never queries the database.
+- Tenant resolution:
+  - `src/proxy.ts` reads the hostname and rewrites storefront pages into
+    `/sites/[tenant]/**`. Storefront API calls are forwarded with the store's
+    slug **in the path** (`/api/checkout` → `/api/storefront/{slug}/checkout`),
+    so the API never trusts a header to know the store.
+  - `src/app/sites/[tenant]/layout.tsx` re-resolves the store from the URL
+    segment through the API. Never trust a header for data.
+  - Custom domains resolve through the API's internal endpoint, cached in
+    `src/lib/domains/resolve.ts`. Subdomains need no lookup.
+- **Proxy-only headers — `x-tenant-slug`, `x-internal-key`, `x-client-ip` — are
+  deleted from every inbound request.** An inbound value is always hostile.
+  `/api/internal/*` is refused at the proxy: every forwarded request carries the
+  internal key, so forwarding those would give it to anyone.
+- Admin authorization in pages goes through `requireTenantMember(storeSlug)` in
+  `src/lib/auth.ts`, which asks the API; the API checks membership against the
+  slug on every call. Never a claim read off the session.
 - Per-tenant uniqueness only: `@@unique([tenantId, code])`, `@@unique([tenantId, slug])`.
   Never add a bare global unique on a value a tenant controls.
 
@@ -120,15 +127,15 @@ business's data to another.**
 - All money is integer kobo (`priceKobo`, `totalKobo`). Never `Float`. Display
   via `formatCurrency(kobo)` from `src/lib/utils.ts`; convert form input with
   `toMinor`/`toMajor`.
-- Checkout totals are always recomputed server-side in
-  `src/app/api/checkout/route.ts` from the database. A client-supplied price or
-  total is never trusted.
+- Checkout totals are always recomputed server-side by the API
+  (`../api/src/modules/storefront/storefront.controller.ts`) from the database.
+  A client-supplied price or total is never trusted.
 - **Payments are initialized server-side** (`initializeTransaction`). The browser
   receives an opaque `access_code`, never a mutable amount. Handing the frontend
   a public key plus a number lets the customer choose what to pay.
 - Fulfillment — marking `PAID`, decrementing stock, incrementing coupon usage —
-  happens in exactly one place: `verifyAndFulfillOrder()` in
-  `src/lib/payments/verify-order.ts`. Never duplicate it in a caller.
+  happens in exactly one place: `FulfillmentService.verifyAndFulfillOrder()` in
+  `../api/src/modules/payments/fulfillment.service.ts`. Never duplicate it.
 - Stock decrements are conditional (`updateMany` with `stock: { gte: qty }`).
   A plain `decrement` lets concurrent buyers drive stock negative. When stock is
   unavailable at fulfillment, the order is **still marked PAID** and flagged with
@@ -212,8 +219,8 @@ or weights. **One axis, not a matrix** — see the schema comment for why.
   re-derived from the name — deriving it would silently change a live URL when
   a merchant fixes a typo.
 - **`Product.categoryId` is a plain foreign key and does not know about
-  tenancy.** Postgres will accept another tenant's category id. Every route
-  that writes it resolves the category through `tenantDb` first.
+  tenancy.** Postgres will accept another tenant's category id. Every API
+  route that writes it resolves the category through `tenantDb` first.
 - Deleting a category is `onDelete: SetNull` — it un-files products rather than
   deleting them. The route returns the orphaned count so the UI can confirm.
 - Category pages are real routes, not a query filter: they carry their own
@@ -335,8 +342,10 @@ between a theme and the per-client codebase the architecture exists to avoid.
 - No broad refactors, no moving files, unless explicitly requested.
 - Never introduce a per-tenant deployment, database, or codebase branch. The
   multi-tenant architecture is a hard constraint, not a default to override.
-- Never write fulfillment logic outside `verifyAndFulfillOrder()`.
-- Never weaken the `x-tenant-slug` sanitising in `proxy.ts`.
+- Never write fulfillment logic outside `verifyAndFulfillOrder()` in the API.
+- Never weaken the proxy-only header sanitising in `proxy.ts`.
+- Never add a database, Prisma, or a payment or media secret to this app. New
+  data needs a new API endpoint.
 - Avoid new dependencies unless justified.
 - Changes to checkout, payments, or tenant resolution require tests.
 
@@ -344,27 +353,28 @@ between a theme and the per-client codebase the architecture exists to avoid.
 
 | Purpose                             | File                                             |
 | ----------------------------------- | ------------------------------------------------ |
-| Prisma schema (enums + models)      | `prisma/schema.prisma`                           |
+| Prisma schema (enums + models)      | `../api/prisma/schema.prisma`                    |
+| Server-side API client              | `src/lib/server-api.ts`                          |
 | Marketing copy, prices, brand       | `src/constant/marketing.ts`                      |
 | Storefront theme tokens             | `src/constant/storefront-themes.ts`              |
-| Variant pricing + availability      | `src/lib/products/variants.ts`                   |
-| CSV reader                          | `src/lib/csv.ts`                                 |
-| Import parsing + template           | `src/lib/validation/import.ts`                   |
+| Variant pricing + availability      | `packages/core/src/variants.ts`                  |
+| CSV reader                          | `packages/core/src/csv.ts`                       |
+| Import parsing + template           | `packages/core/src/validation/import.ts`         |
 | Marketing shell (header + footer)   | `src/components/Layouts/Marketing/**`            |
 | Canonical host for a tenant         | `src/lib/domains/canonical.ts`                   |
 | Structured-data helper              | `src/components/JsonLd.tsx`                      |
-| Platform revenue ledger             | `PlatformEarning` (written in `verify-order.ts`) |
-| Tenant-scoped query wrapper         | `src/lib/tenant-db.ts`                           |
+| Platform revenue ledger             | `PlatformEarning` (written by fulfilment, API)   |
+| Tenant-scoped query wrapper         | `../api/src/database/tenant-db.ts`               |
 | Tenant routing (Next 16 `proxy.ts`) | `src/proxy.ts`                                   |
 | Hostname -> tenant resolution       | `src/lib/domains/resolve.ts`                     |
 | Reserved subdomains                 | `src/lib/domains/reserved.ts`                    |
 | Tenant storefront root layout       | `src/app/sites/[tenant]/layout.tsx`              |
 | Authorization helpers               | `src/lib/auth.ts`                                |
-| Checkout route                      | `src/app/api/checkout/route.ts`                  |
-| Fulfillment (single source)         | `src/lib/payments/verify-order.ts`               |
-| Paystack client                     | `src/lib/payments/paystack.ts`                   |
-| Paystack webhook                    | `src/app/api/webhooks/paystack/route.ts`         |
-| Checkout Zod schemas                | `src/lib/validation/checkout.ts`                 |
+| Checkout (API)                      | `../api/src/modules/storefront/`                 |
+| Fulfillment (single source, API)    | `../api/src/modules/payments/fulfillment.service.ts` |
+| Paystack client (API)               | `../api/src/integrations/paystack.service.ts`    |
+| Paystack webhook (API)              | `../api/src/modules/payments/payments.controller.ts` |
+| Checkout Zod schemas                | `packages/core/src/validation/checkout.ts`       |
 | Route constants                     | `src/constant/routes.ts`                         |
 | Sidebar menus                       | `src/constant/menu.tsx`                          |
 | Shared utilities                    | `src/lib/utils.ts`                               |
@@ -375,8 +385,8 @@ between a theme and the per-client codebase the architecture exists to avoid.
 
 - Inspect related files for existing patterns before editing.
 - Run validation appropriate to the scope after editing.
-- Any change touching `prisma/schema.prisma`, `src/proxy.ts`,
-  `verify-order.ts`, or `api/checkout/route.ts` requires a manual end-to-end
+- Any change touching `../api/prisma/schema.prisma`, `src/proxy.ts`, or the
+  API's fulfilment or checkout requires a manual end-to-end
   test before it is done: add to cart → checkout → test card → order `PAID` →
   stock decremented. These are the highest-blast-radius files in the codebase —
   a bug here hits every tenant at once.
