@@ -170,6 +170,7 @@ describe('layout', () => {
 
   it('drops a broken section and keeps the rest of the page', () => {
     const layout = defaultLayout();
+    const seeded = layout.pages.home.length;
     layout.pages.home.push(
       { id: sectionId('collection-row'), type: 'made-up', visible: true, settings: {} },
       {
@@ -181,9 +182,17 @@ describe('layout', () => {
     );
 
     const { layout: parsed, problems } = parseLayout(layout);
-    expect(parsed.pages.home).toHaveLength(1);
-    expect(parsed.pages.home[0]?.type).toBe('collection-row');
+    // The two broken ones are gone; everything the store started with survives.
+    expect(parsed.pages.home).toHaveLength(seeded);
     expect(problems).toHaveLength(2);
+  });
+
+  it('seeds a page that works before a merchant uploads a single photo', () => {
+    // A hero cannot be seeded — it needs an image only the merchant has — so
+    // the default page must still read as a shop without one.
+    const types = defaultLayout().pages.home.map((section) => section.type);
+    expect(types).toContain('collection-row');
+    expect(types).not.toContain('hero');
   });
 
   it('never throws on rubbish — a storefront must always render', () => {

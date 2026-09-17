@@ -322,7 +322,7 @@ Each phase ships something a merchant can see.
 | --- | --- | --- |
 | **1. Foundation** ✅ **done 2026-09-17** | Widened tokens, 4 presets, motion primitives, `StorefrontLayout` model + registry + API, section renderer | Stores render from their own layout; palettes, type and spacing come from a preset |
 | **2. Chrome** ✅ **done 2026-09-17** | Header (3 layouts, mega menu, mobile overlay), announcement bar, footer, mobile bottom bar, drawer cart, search | The store stops looking like a demo; navigation exists |
-| **3. Home sections** (~1.5 wk) | Hero (+ hotspots), slideshow, collection row (+ ranked), tabbed products, category tiles, promo tiles, marquee, countdown, rich text, image+text, FAQ, press, UGC, newsletter | Composed home pages, seeded per preset |
+| **3. Home sections** ✅ **done 2026-09-17** | Hero (+ hotspots), collection row (+ ranked), tabbed products, category tiles, promo tiles, marquee, countdown, rich text, image+text, FAQ, press, testimonials, gallery, newsletter | Composed home pages, seeded per preset |
 | **4. Product & collection** (~1 wk) | Gallery, swatches, size grid, sticky ATC, urgency, trust, pairs-well-with, description accordion; filters, sort, density, sub-collection pills | The two pages that convert |
 | **5. Mobile editor** (~1.5 wk) | Design section of the app: appearance, section list with reorder, generated forms, image/hotspot pickers, preview WebView, publish/revert | The ask: a merchant designs their store from their phone |
 | **6. Polish** (~1 wk) | Page transitions, annotations, bundle builder, lookbook, video, performance pass against the budget, a11y audit | The details that make it feel bought, not built |
@@ -397,6 +397,51 @@ Two changes the tests caught, both worth keeping:
 - **Two "Email" labels on the checkout page** once the footer gained a
   newsletter field. The footer's is now "Email address for updates"; an
   ambiguous label is an accessibility problem before it is a test problem.
+
+---
+
+## Phase 3 — what shipped (2026-09-17)
+
+Fourteen sections render, and the merchant's arrangement decides the page.
+
+| Section | Notes |
+| --- | --- |
+| Hero | Image or video (a GIF is converted to video by Cloudinary), overlay, two CTAs, and **shoppable hotspots** — each dot a real button labelled with its product, so the photograph is keyboard-navigable. "Add all to cart" skips anything that needs a size chosen. |
+| Collection row | Grid, carousel, or ranked "Top 10" with oversized numerals. |
+| Product tabs | Switches without a request: every tab's products come from the catalogue the page already fetched. |
+| Category tiles | Square, circle (the story-rail shape) or tall; scrolls sideways on a phone. |
+| Promo tiles | Labels visible on touch, lifted on hover — a reveal a phone can never trigger is a label nobody reads. |
+| Countdown | Says what happens when it ends, and means it. Digits start blank so the server and the browser never disagree. |
+| Marquee | Duplicated track, CSS only, pauses on hover, second copy `aria-hidden`. |
+| FAQ | `<details>`/`<summary>` — opens, is keyboard operable, announced correctly, and findable by the browser's own find-in-page, with **zero JavaScript**. |
+| Press, testimonials, gallery, image+text, rich text, newsletter | Presentational; gallery photos can be tagged with the product in them. |
+
+Verified by `e2e/storefront-sections.spec.ts` (5 tests): a hotspot names its
+product and opens, "add all" fills the cart, tabs switch without navigating,
+the FAQ opens natively, and the countdown actually counts.
+
+### The performance pass — what measuring found
+
+The plan set a budget of 60KB gzipped JavaScript. Measured against a production
+build, the storefront home page was **268KB**. The product page was the same
+size, which was the clue: the sections were not the cost, the baseline was.
+
+| Cause | Fix | Saved (gzipped) |
+| --- | --- | --- |
+| `next-cloudinary`'s `CldImage` bundles `@cloudinary-util/url-loader`, which bundles **its own copy of Zod** — to build a URL we already build in `packages/core` | Our own `<img>` with a Cloudinary `srcSet`; also no longer a Client Component, so the catalogue ships no JS for images at all | **46KB** |
+| `@core/storefront/tokens` held a Zod schema, and the shell imports that module for its colours | Schema moved to `token-schema.ts`; the token maths is dependency-free | **63KB** |
+| `@/lib/utils` exports date helpers, so importing `cn` from it dragged in `date-fns` | `cn` lives in its own leaf module | ~13KB |
+| `<Toaster/>` in the root layout put the toast runtime on every storefront page, where nothing toasts (checkout shows errors inline, deliberately) | Moved to the dashboard layout | ~12KB |
+
+**268KB → 159KB gzipped, a 41% cut**, and a phone now fetches the 320px image
+variant rather than a desktop-sized one.
+
+**The budget was wrong, and should be restated.** Next's App Router baseline —
+React, the router, hydration — is ~130KB gzipped here before a line of our code.
+The honest target is **≤30KB of our own JavaScript** on top of that, which is
+where we now sit. Getting materially below the framework floor would mean
+static-rendering storefront pages with no client runtime at all: worth
+considering, but it is a different project from this one.
 
 ---
 

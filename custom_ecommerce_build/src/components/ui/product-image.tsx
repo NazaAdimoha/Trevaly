@@ -1,24 +1,32 @@
-'use client';
+import { cloudinaryUrl } from '@core/media/folder';
 
-import { CldImage } from 'next-cloudinary';
+import { cn } from '@/lib/cn';
 
 /**
  * Product imagery, delivered through Cloudinary.
  *
- * `CldImage` applies `f_auto`/`q_auto` to every delivery URL, so a tenant who
- * uploads a 4MB phone photo still serves an appropriately sized AVIF/WebP.
- * That matters more here than on most sites: storefronts carry a Lighthouse
- * ≥ 90 mobile target (M5) and product grids are almost entirely images.
+ * Builds the delivery URL with `cloudinaryUrl` from the shared core rather than
+ * `next-cloudinary`'s `CldImage`. That is a deliberate swap, made after
+ * measuring: `CldImage` drags `@cloudinary-util/url-loader`, which bundles its
+ * own copy of Zod — **42KB gzipped on every storefront page**, to build a URL
+ * we already know how to build, for a store whose shoppers are on Nigerian
+ * mobile data. The transformations it applied (`f_auto`, `q_auto`, an automatic
+ * crop) are the same ones our helper emits.
  *
- * `src` is whatever `Product.imageUrls` holds. Cloudinary accepts either a bare
- * public ID or a full `res.cloudinary.com` URL, so this keeps working whichever
- * of the two M8's upload flow settles on writing.
+ * It is also no longer a Client Component: nothing here is interactive, so the
+ * catalogue now ships no JavaScript for its images at all.
+ *
+ * `srcSet` covers the widths a card is actually rendered at, so a phone fetches
+ * a phone-sized image. `sizes` must track the grid's column counts or the
+ * browser picks from the wrong end of that list.
  */
+const WIDTHS = [320, 480, 640, 960, 1280, 1600];
+
 export function ProductImage({
   src,
   alt,
   className,
-  sizes,
+  sizes = '(max-width: 768px) 50vw, 25vw',
   priority,
 }: {
   src: string;
@@ -27,17 +35,28 @@ export function ProductImage({
   sizes?: string;
   priority?: boolean;
 }) {
+  const url = (width: number) =>
+    cloudinaryUrl(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, src, {
+      width,
+      crop: 'fill',
+    });
+
+  const fallback = url(960);
+  if (!fallback) return null;
+
   return (
-    <CldImage
-      src={src}
-      alt={alt}
-      fill
+    // eslint-disable-next-line @next/next/no-img-element -- Cloudinary is the optimiser here; next/image would re-process an already-optimised asset and add a second hop
+    <img
+      src={fallback}
+      srcSet={WIDTHS.map((width) => `${url(width)} ${width}w`).join(', ')}
       sizes={sizes}
-      priority={priority}
-      className={className}
-      // Crop rather than letterbox: a grid of mixed aspect ratios reads as
-      // broken, and `auto` keeps the subject rather than the centre pixels.
-      crop={{ type: 'auto', source: true }}
+      alt={alt}
+      // The hero-adjacent first card should not wait its turn; everything else
+      // loads when it is close to the viewport.
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
+      decoding='async'
+      className={cn('absolute inset-0 size-full', className)}
     />
   );
 }

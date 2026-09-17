@@ -3,8 +3,9 @@
 import { Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
+import { formatCurrency } from '@core/money';
+
 import { lineKey, useCart } from '@/lib/store/cart';
-import { formatCurrency } from '@/lib/utils';
 
 import { ProductImage } from '@/components/ui/product-image';
 

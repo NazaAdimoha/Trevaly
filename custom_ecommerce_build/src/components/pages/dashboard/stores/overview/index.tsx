@@ -1,12 +1,13 @@
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
+import type { TenantStatus } from '@core/enums';
+
 import { formatCurrency } from '@/lib/utils';
 
 import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
-import type { TenantStatus } from '@core/enums';
 
 type Stats = {
   productCount: number;

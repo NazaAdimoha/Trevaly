@@ -1,7 +1,8 @@
 import Link from 'next/link';
 
-import ROUTES from '@/constant/routes';
 import type { TenantRole, TenantStatus } from '@core/enums';
+
+import ROUTES from '@/constant/routes';
 
 type StoreListItem = {
   tenant: { id: string; name: string; slug: string; status: TenantStatus };

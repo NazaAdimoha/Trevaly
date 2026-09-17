@@ -4,10 +4,10 @@ import { Lock, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 import { cloudinaryUrl } from '@core/media/folder';
+import { formatCurrency } from '@core/money';
 
 import { type CartItem, lineKey, useCart } from '@/lib/store/cart';
 import { useIsOpen, useStorefrontUi } from '@/lib/store/ui';
-import { formatCurrency } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 

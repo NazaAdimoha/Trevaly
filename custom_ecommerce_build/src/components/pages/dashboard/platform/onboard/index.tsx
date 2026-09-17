@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 
-import { api, apiFetcher, extractErrorMessage } from '@/lib/api';
 import { slugifyTenantName } from '@core/validation/tenant';
+
+import { api, apiFetcher, extractErrorMessage } from '@/lib/api';
 
 import Button from '@/components/buttons/Button';
 import { InputField } from '@/components/fields/InputField';

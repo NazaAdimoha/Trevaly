@@ -1,10 +1,6 @@
-import { type ClassValue, clsx } from 'clsx';
 import { format, isValid, parseISO, subYears } from 'date-fns';
-import { twMerge } from 'tailwind-merge';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from './cn';
 
 export const DOB_MAX_YEAR = subYears(new Date(), 18);
 

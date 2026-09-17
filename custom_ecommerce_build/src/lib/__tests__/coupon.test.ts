@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { CouponType } from '@core/enums';
 import {
   computeDiscountKobo,
   COUPON_NOT_APPLICABLE,
   couponRejectionReason,
   publicCouponRejection,
 } from '@core/validation/coupon';
-
-import { CouponType } from '@core/enums';
 
 const FUTURE = new Date(Date.now() + 86_400_000);
 const PAST = new Date(Date.now() - 86_400_000);

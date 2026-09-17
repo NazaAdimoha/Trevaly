@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { formatCurrency } from '@core/money';
 import {
   activeVariants,
   hasVariants,
@@ -11,10 +12,10 @@ import {
   variantPriceKobo,
 } from '@core/variants';
 
+import { cn } from '@/lib/cn';
 import { useCart } from '@/lib/store/cart';
 import { useStorefrontUi } from '@/lib/store/ui';
 import { useTenant } from '@/lib/tenant-context';
-import { cn, formatCurrency } from '@/lib/utils';
 
 import { ProductImage } from '@/components/ui/product-image';
 

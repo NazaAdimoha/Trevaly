@@ -6,9 +6,9 @@ import { useState } from 'react';
 
 import { cloudinaryUrl } from '@core/media/folder';
 
+import { cn } from '@/lib/cn';
 import { useIsOpen, useStorefrontUi } from '@/lib/store/ui';
 import { useTenant } from '@/lib/tenant-context';
-import { cn } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 

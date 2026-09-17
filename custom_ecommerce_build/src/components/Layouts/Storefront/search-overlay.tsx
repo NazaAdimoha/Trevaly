@@ -40,7 +40,7 @@ export function SearchOverlay({ suggestions }: { suggestions: { name: string; sl
         >
           <Search className='st-muted size-5 shrink-0' />
           <input
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- the shopper opened a search panel; anything else means a second tap
+             
             autoFocus
             type='search'
             value={query}

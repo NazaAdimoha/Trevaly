@@ -5,6 +5,7 @@ import { type ReactNode, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 
+import { DeliveryMethod, OrderStatus } from '@core/enums';
 import { nextStatuses, ORDER_ACTION_LABEL } from '@core/orders';
 
 import { api, apiFetcher, handleApiError } from '@/lib/api';
@@ -15,7 +16,6 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
-import { DeliveryMethod, OrderStatus } from '@core/enums';
 
 import { ORDER_STATUS_BADGE } from '../constants';
 

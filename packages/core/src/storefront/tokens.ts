@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import { StorefrontTheme } from "../enums";
 import { alpha, darken, ensureContrast, isHexColor, readableInk } from "./color";
 
@@ -252,21 +250,21 @@ export function presetForTheme(theme: StorefrontTheme | null | undefined): Prese
   return theme ? (THEME_TO_PRESET[theme] ?? "momentum") : "momentum";
 }
 
-/** What a merchant may change on top of a preset. Everything else is ours. */
-export const tokenOverridesSchema = z
-  .object({
-    accent: z
-      .string()
-      .regex(/^#[0-9a-fA-F]{6}$/, "Use a six-digit hex colour like #4DBF7D")
-      .nullable()
-      .optional(),
-    density: z.enum(DENSITIES).optional(),
-    mediaRatio: z.enum(MEDIA_RATIOS).optional(),
-    mediaFit: z.enum(["cover", "contain"]).optional(),
-  })
-  .strict();
-
-export type TokenOverrides = z.infer<typeof tokenOverridesSchema>;
+/**
+ * What a merchant may change on top of a preset. Everything else is ours.
+ *
+ * The TYPE lives here and its Zod schema lives in `./token-schema`, which is
+ * not a tidiness split: this module is imported by the storefront shell to turn
+ * a preset into CSS variables, so anything it imports is downloaded by every
+ * shopper. Keeping the validator out of it takes Zod off the storefront
+ * entirely — measured at ~60KB gzipped, on a page that validates nothing.
+ */
+export type TokenOverrides = {
+  accent?: string | null;
+  density?: Density;
+  mediaRatio?: MediaRatio;
+  mediaFit?: "cover" | "contain";
+};
 
 export function resolveTokens(
   preset: PresetKey,

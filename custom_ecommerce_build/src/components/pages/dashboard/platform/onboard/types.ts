@@ -1,8 +1,7 @@
 import * as Yup from 'yup';
 
-import { RESERVED_SUBDOMAINS } from '@core/reserved';
-
 import { StorefrontTheme } from '@core/enums';
+import { RESERVED_SUBDOMAINS } from '@core/reserved';
 
 /**
  * Formik/Yup for the operator filling the form. The API re-validates the same

@@ -7,10 +7,10 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { cloudinaryUrl } from '@core/media/folder';
 import type { StorefrontLayout } from '@core/storefront/layout';
 
+import { cn } from '@/lib/cn';
 import { useCart } from '@/lib/store/cart';
 import { useStorefrontUi } from '@/lib/store/ui';
 import { useTenant } from '@/lib/tenant-context';
-import { cn } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 

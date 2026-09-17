@@ -3,7 +3,7 @@
 import { X } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/cn';
 
 /**
  * The slide-over every storefront panel is built from — cart, search, menu.

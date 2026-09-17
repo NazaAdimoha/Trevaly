@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 
+import { CouponType } from '@core/enums';
+
 import { api, apiFetcher, handleApiError } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -12,7 +14,6 @@ import Button from '@/components/buttons/Button';
 import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
-import { CouponType } from '@core/enums';
 
 type Coupon = {
   id: string;

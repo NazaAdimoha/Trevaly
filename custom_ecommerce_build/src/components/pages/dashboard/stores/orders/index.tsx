@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import useSWR from 'swr';
 
+import type { OrderStatus } from '@core/enums';
+
 import { apiFetcher } from '@/lib/api';
 import { cn, DATE_FORMATS, formatCurrency, formatDate } from '@/lib/utils';
 import { useFilters } from '@/hooks/use-filters';
@@ -16,7 +18,6 @@ import { TableActionMenu } from '@/components/ui/table-action-menu';
 import { type IColumn, TableFactory } from '@/components/ui/table-factory';
 
 import ROUTES from '@/constant/routes';
-import type { OrderStatus } from '@core/enums';
 
 import { ORDER_STATUS_BADGE, ORDER_STATUS_OPTIONS } from './constants';
 

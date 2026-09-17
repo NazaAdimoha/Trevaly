@@ -2,13 +2,14 @@
 
 import { useField } from 'formik';
 
+import type { StorefrontTheme } from '@core/enums';
+
 import { cn } from '@/lib/utils';
 
 import {
   STOREFRONT_THEME_OPTIONS,
   STOREFRONT_THEMES,
 } from '@/constant/storefront-themes';
-import type { StorefrontTheme } from '@core/enums';
 
 /**
  * Storefront look picker.

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { formatCurrency } from '@core/money';
 import {
   displayPriceKobo,
   hasPriceRange,
@@ -7,7 +8,7 @@ import {
   type VariantLike,
 } from '@core/variants';
 
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn } from '@/lib/cn';
 
 import { ProductImage } from '@/components/ui/product-image';
 
@@ -18,6 +19,8 @@ export type StorefrontProductCard = {
   name: string;
   slug: string;
   sku: string | null;
+  /** Which collection this belongs to, for sections that filter by one. */
+  categoryId?: string | null;
   priceKobo: number;
   stock: number;
   optionName: string | null;

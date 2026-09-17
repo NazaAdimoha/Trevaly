@@ -7,7 +7,8 @@ import {
   sectionDefinition,
   sectionSettingsSchema,
 } from "./registry";
-import { PRESET_KEYS, type PresetKey, tokenOverridesSchema } from "./tokens";
+import { tokenOverridesSchema } from "./token-schema";
+import { PRESET_KEYS, type PresetKey } from "./tokens";
 
 /**
  * A storefront layout: what a store looks like, as data.
@@ -274,7 +275,27 @@ export function defaultLayout(preset: PresetKey = "momentum"): StorefrontLayout 
       showPaymentIcons: true,
     },
     pages: {
+      /**
+       * Seeded with sections that need no photography.
+       *
+       * A hero is the section a store most wants and the one we cannot seed: it
+       * needs an image only the merchant has, and an empty hero is worse than
+       * no hero. Everything here works on day one with nothing but a catalogue.
+       */
       home: [
+        {
+          id: sectionId("marquee"),
+          type: "marquee",
+          visible: true,
+          settings: {
+            speed: 40,
+            items: [
+              { text: "Fast delivery nationwide" },
+              { text: "Secure checkout" },
+              { text: "Real people on WhatsApp" },
+            ],
+          },
+        },
         {
           id: sectionId("collection-row"),
           type: "collection-row",
@@ -285,6 +306,32 @@ export function defaultLayout(preset: PresetKey = "momentum"): StorefrontLayout 
             count: 8,
             showSwatches: true,
             quickAdd: true,
+          },
+        },
+        {
+          id: sectionId("faq"),
+          type: "faq",
+          visible: true,
+          settings: {
+            heading: "Frequently asked questions",
+            openFirst: true,
+            items: [
+              {
+                question: "How long does delivery take?",
+                answer:
+                  "Orders are packed within a day. Delivery within Lagos is usually next day; elsewhere in Nigeria, two to four days.",
+              },
+              {
+                question: "How do I pay?",
+                answer:
+                  "Card, bank transfer or USSD at checkout. Payment is handled by Paystack — we never see your card details.",
+              },
+              {
+                question: "Can I return something?",
+                answer:
+                  "Message us within seven days of delivery and we will sort it out.",
+              },
+            ],
           },
         },
       ],

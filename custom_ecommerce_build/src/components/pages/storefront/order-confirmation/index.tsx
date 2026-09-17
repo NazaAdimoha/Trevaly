@@ -4,9 +4,10 @@ import { CheckCircle2, Clock, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { formatCurrency } from '@core/money';
+
 import { api } from '@/lib/api';
 import { useCart } from '@/lib/store/cart';
-import { formatCurrency } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 

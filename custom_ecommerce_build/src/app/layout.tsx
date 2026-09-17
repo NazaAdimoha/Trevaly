@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 
 import '@/styles/globals.css';
 
-import { Toaster } from '@/components/ui/sonner';
 
 /**
  * Document shell for every surface — platform and storefront alike.
@@ -50,7 +49,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang='en'>
       <body>
         {children}
-        <Toaster position='top-right' richColors />
       </body>
     </html>
   );

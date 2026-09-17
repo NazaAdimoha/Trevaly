@@ -67,3 +67,37 @@ export function cloudinaryUrl(
 
   return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms.join(",")}/${publicId}`;
 }
+
+/**
+ * A Cloudinary delivery URL for a stored VIDEO public id.
+ *
+ * `f_auto` is what makes an uploaded GIF affordable: Cloudinary re-encodes it
+ * to MP4 or WebM per browser, which is routinely a tenth of the bytes. A
+ * merchant uploads the GIF they already have and a shopper on 3G gets video.
+ */
+export function cloudinaryVideoUrl(
+  cloudName: string | null | undefined,
+  publicId: string | null | undefined,
+  options: { width?: number } = {},
+): string | null {
+  if (!cloudName || !publicId) return null;
+
+  const transforms = ["f_auto", "q_auto"];
+  if (options.width) transforms.unshift(`w_${options.width}`);
+
+  return `https://res.cloudinary.com/${cloudName}/video/upload/${transforms.join(",")}/${publicId}`;
+}
+
+/** The still frame for a video, so nothing renders as a black rectangle. */
+export function cloudinaryVideoPoster(
+  cloudName: string | null | undefined,
+  publicId: string | null | undefined,
+  options: { width?: number } = {},
+): string | null {
+  if (!cloudName || !publicId) return null;
+
+  const transforms = ["f_auto", "q_auto", "so_0"];
+  if (options.width) transforms.unshift(`w_${options.width}`);
+
+  return `https://res.cloudinary.com/${cloudName}/video/upload/${transforms.join(",")}/${publicId}.jpg`;
+}

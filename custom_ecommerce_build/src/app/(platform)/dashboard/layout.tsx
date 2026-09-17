@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 
 import { getPlatformRole } from '@/lib/auth';
 
+import { Toaster } from '@/components/ui/sonner';
+
 import ROUTES from '@/constant/routes';
 
 /**
@@ -28,6 +30,11 @@ export default async function DashboardLayout({
   const platformRole = await getPlatformRole();
 
   return (
+    /* The toaster lives here rather than in the root layout: every mutation
+       that raises one is in this subtree, and mounting it globally shipped the
+       toast runtime to every storefront page, where nothing ever toasts.
+       Checkout shows its errors inline on purpose — a customer mid-payment
+       misses a toast. */
     <div className='min-h-screen'>
       <header className='flex h-14 items-center justify-between border-b bg-white px-6'>
         <nav className='flex items-center gap-5 text-sm'>
@@ -43,6 +50,7 @@ export default async function DashboardLayout({
         <UserButton />
       </header>
       {children}
+      <Toaster position='top-right' richColors />
     </div>
   );
 }

@@ -6,17 +6,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { DeliveryMethod } from '@core/enums';
+import { formatCurrency } from '@core/money';
+
 import { api, extractErrorMessage } from '@/lib/api';
 import { resumePaystackTransaction } from '@/lib/payments/paystack-popup';
 import { useCart } from '@/lib/store/cart';
-import { formatCurrency } from '@/lib/utils';
 
 import { InputField } from '@/components/fields/InputField';
 import { SelectField } from '@/components/fields/SelectField';
 import { TextAreaField } from '@/components/fields/TextAreaField';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
-import { DeliveryMethod } from '@core/enums';
 
 import {
   checkoutInitialValues,

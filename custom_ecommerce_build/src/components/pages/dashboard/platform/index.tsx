@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import useSWR from 'swr';
 
+import type { TenantStatus } from '@core/enums';
+
 import { apiFetcher } from '@/lib/api';
 
 import ROUTES from '@/constant/routes';
-import type { TenantStatus } from '@core/enums';
 
 type PlatformTenant = {
   id: string;

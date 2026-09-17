@@ -7,9 +7,9 @@ import { useSyncExternalStore } from 'react';
 
 import type { StorefrontLayout } from '@core/storefront/layout';
 
+import { cn } from '@/lib/cn';
 import { useCart } from '@/lib/store/cart';
 import { useStorefrontUi } from '@/lib/store/ui';
-import { cn } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 

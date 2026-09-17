@@ -1,8 +1,9 @@
+import type { StorefrontTheme } from '@core/enums';
+
 import {
   STOREFRONT_THEME_OPTIONS,
   STOREFRONT_THEMES,
 } from '@/constant/storefront-themes';
-import type { StorefrontTheme } from '@core/enums';
 
 import { Eyebrow, SectionHeading } from '../shared';
 

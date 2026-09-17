@@ -46,6 +46,7 @@ export default async function StorefrontHomePage({
         <SectionRenderer
           sections={sections}
           products={catalog.products}
+          categories={catalog.categories}
           storeName={tenant.name}
         />
       ) : (

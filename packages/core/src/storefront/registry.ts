@@ -104,7 +104,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "hero",
     label: "Hero",
     description: "Full-width image or video with a headline and buttons. Can be shoppable.",
-    status: "planned",
+    status: "ready",
     group: "hero",
     pages: ["home", "collection"],
     fields: [
@@ -223,7 +223,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "tabbed-products",
     label: "Product tabs",
     description: "New arrivals, best sellers and sale in one switchable carousel.",
-    status: "planned",
+    status: "ready",
     group: "products",
     pages: ["home"],
     fields: [
@@ -247,7 +247,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "category-tiles",
     label: "Category tiles",
     description: "Shop-by-category images in a row.",
-    status: "planned",
+    status: "ready",
     group: "products",
     pages: ["home"],
     fields: [
@@ -283,7 +283,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "promo-tiles",
     label: "Promotion tiles",
     description: "Two to four large images with a label that reveals on hover.",
-    status: "planned",
+    status: "ready",
     group: "content",
     pages: ["home"],
     fields: [
@@ -309,7 +309,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "countdown",
     label: "Countdown",
     description: "A deadline on a sale. Days, hours, minutes, seconds.",
-    status: "planned",
+    status: "ready",
     group: "commerce",
     pages: ["home", "collection"],
     fields: [
@@ -334,7 +334,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "marquee",
     label: "Scrolling strip",
     description: "Free shipping · 30-day returns · Secure checkout, moving slowly across the page.",
-    status: "planned",
+    status: "ready",
     group: "content",
     pages: ["home", "collection", "product"],
     fields: [
@@ -355,7 +355,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "image-with-text",
     label: "Image with text",
     description: "One image beside a paragraph. The workhorse for telling a brand story.",
-    status: "planned",
+    status: "ready",
     group: "content",
     pages: ["home", "collection", "product"],
     fields: [
@@ -403,7 +403,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "press",
     label: "Press",
     description: "A quote and the logos of who said it.",
-    status: "planned",
+    status: "ready",
     group: "social",
     pages: ["home"],
     fields: [
@@ -427,7 +427,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "testimonials",
     label: "Reviews",
     description: "What customers said, in their words.",
-    status: "planned",
+    status: "ready",
     group: "social",
     pages: ["home", "product"],
     fields: [
@@ -452,7 +452,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "gallery",
     label: "Photo wall",
     description: "Customer or campaign photos in a grid. Each can link to a product.",
-    status: "planned",
+    status: "ready",
     group: "social",
     pages: ["home"],
     fields: [
@@ -478,7 +478,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "faq",
     label: "Questions",
     description: "The questions that stop someone buying, answered.",
-    status: "planned",
+    status: "ready",
     group: "content",
     pages: ["home", "product"],
     fields: [
@@ -518,7 +518,7 @@ export const SECTIONS: SectionDefinition[] = [
     type: "newsletter",
     label: "Email sign-up",
     description: "Collect an email address, with a reason to give it.",
-    status: "planned",
+    status: "ready",
     group: "commerce",
     pages: ["home"],
     singleton: true,

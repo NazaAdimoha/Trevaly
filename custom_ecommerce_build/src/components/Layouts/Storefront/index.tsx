@@ -12,7 +12,7 @@ import { storefrontStyle } from '@/constant/storefront-themes';
 import { AnnouncementBar } from './announcement-bar';
 import { CartDrawer } from './cart-drawer';
 import { StorefrontFooter } from './footer';
-import { StorefrontHeader, type NavItem } from './header';
+import { type NavItem,StorefrontHeader } from './header';
 import { MobileBar } from './mobile-bar';
 import { MobileMenu } from './mobile-menu';
 import { SearchOverlay } from './search-overlay';
