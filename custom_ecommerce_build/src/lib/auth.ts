@@ -1,18 +1,52 @@
 import { auth } from '@clerk/nextjs/server';
 import { notFound, redirect } from 'next/navigation';
+import { cache } from 'react';
 
-import { prisma } from '@/lib/prisma';
+import type {
+  PlatformRole,
+  StorefrontTheme,
+  TenantRole,
+  TenantStatus,
+} from '@core/enums';
+import { TenantRole as TenantRoles } from '@core/enums';
+import type { MyStoresResponse } from '@core/api/contracts';
+
+import { ApiRequestError, apiGet } from '@/lib/server-api';
 
 import ROUTES from '@/constant/routes';
-import { PlatformRole, TenantRole } from '@/generated/prisma/client';
 
 /**
- * Authorization for the platform dashboard.
+ * Authorization for the dashboard's Server Components.
  *
- * Clerk owns identity only. Tenancy lives in our own `TenantUser` table, so
- * membership is always a database check — never a claim read off the session.
- * See BUILD_PLAN.md D3 for why Clerk Organizations are deliberately not used.
+ * Clerk owns identity; tenancy is decided by the API, which checks the
+ * `TenantUser` table on every call. These helpers only translate the API's
+ * answer into navigation: 401 → sign in, 404 → not found, 403 → unauthorized.
+ *
+ * The API authorizes again on every data call, so a page skipping one of these
+ * would show an empty shell, never another store's data.
  */
+
+/** The store as the API returns it to a member. Dates arrive as ISO strings. */
+export type MemberTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  status: TenantStatus;
+  theme: StorefrontTheme;
+  tagline: string | null;
+  logoPublicId: string | null;
+  primaryColor: string | null;
+  customDomain: string | null;
+  customDomainVerified: boolean;
+  currency: string;
+};
+
+type StoreResponse = {
+  tenant: MemberTenant;
+  role: TenantRole;
+  viaPlatform: boolean;
+  storefrontUrl: string;
+};
 
 export async function requireUser() {
   const { userId } = await auth();
@@ -20,72 +54,69 @@ export async function requireUser() {
   return userId;
 }
 
+function redirectFor(err: unknown): never {
+  if (err instanceof ApiRequestError) {
+    if (err.status === 401) redirect(ROUTES.signIn);
+    if (err.status === 403) redirect(ROUTES.unauthorized);
+    if (err.status === 404) notFound();
+  }
+  throw err;
+}
+
 /**
  * Assert the signed-in user may administer `storeSlug`.
  *
- * Every tenant admin page and mutation must call this. The store slug comes
- * from the URL, and membership is verified against it directly — a user who
- * edits the slug in the address bar gets a 404, not another tenant's data.
+ * Cached per request: the store layout and the page beneath it both ask, and
+ * that must cost one API call, not two.
  */
-export async function requireTenantMember(storeSlug: string) {
+export const requireTenantMember = cache(async (storeSlug: string) => {
   const userId = await requireUser();
-
-  const membership = await prisma.tenantUser.findFirst({
-    where: { clerkUserId: userId, tenant: { slug: storeSlug } },
-    include: { tenant: true },
-  });
-
-  if (membership) {
-    return { tenant: membership.tenant, role: membership.role, userId };
-  }
-
-  // Platform staff can open any store for support purposes. This is the only
-  // path that bypasses membership, and it is an explicit, auditable branch.
-  const platformUser = await prisma.platformUser.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (platformUser) {
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: storeSlug },
+  try {
+    const store = await apiGet<StoreResponse>(`/stores/${encodeURIComponent(storeSlug)}`, {
+      signedIn: true,
     });
-    if (tenant) {
-      return { tenant, role: TenantRole.OWNER, userId, viaPlatform: true };
-    }
+    return { ...store, userId };
+  } catch (err) {
+    return redirectFor(err);
   }
-
-  notFound();
-}
+});
 
 export async function requireStoreOwner(storeSlug: string) {
   const context = await requireTenantMember(storeSlug);
-  if (context.role !== TenantRole.OWNER) redirect(ROUTES.unauthorized);
+  if (context.role !== TenantRoles.OWNER) redirect(ROUTES.unauthorized);
   return context;
 }
 
+/** The signed-in user's platform role, or null. Cached per request. */
+export const getPlatformRole = cache(async (): Promise<PlatformRole | null> => {
+  await requireUser();
+  try {
+    const me = await apiGet<{ userId: string; platformRole: PlatformRole | null }>('/me', {
+      signedIn: true,
+    });
+    return me.platformRole;
+  } catch (err) {
+    return redirectFor(err);
+  }
+});
+
 export async function requirePlatformAdmin() {
   const userId = await requireUser();
-
-  const platformUser = await prisma.platformUser.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (platformUser?.role !== PlatformRole.SUPER_ADMIN) {
-    redirect(ROUTES.unauthorized);
-  }
-
-  return { userId, platformUser };
+  const platformRole = await getPlatformRole();
+  if (platformRole !== 'SUPER_ADMIN') redirect(ROUTES.unauthorized);
+  return { userId, platformRole };
 }
 
 /** Every store the signed-in user can administer — drives the store switcher. */
 export async function listMyStores() {
-  const userId = await requireUser();
-
-  const memberships = await prisma.tenantUser.findMany({
-    where: { clerkUserId: userId },
-    include: { tenant: true },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  return memberships.map((m) => ({ tenant: m.tenant, role: m.role }));
+  await requireUser();
+  try {
+    const { items } = await apiGet<MyStoresResponse>('/me/stores', { signedIn: true });
+    return items.map((store) => ({
+      tenant: { id: store.id, name: store.name, slug: store.slug, status: store.status },
+      role: store.role,
+    }));
+  } catch (err) {
+    return redirectFor(err);
+  }
 }

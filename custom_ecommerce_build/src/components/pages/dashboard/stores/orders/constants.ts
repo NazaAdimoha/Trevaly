@@ -1,4 +1,4 @@
-import { OrderStatus } from '@/generated/prisma/enums';
+import { OrderStatus } from '@core/enums';
 
 /**
  * Status presentation, shared by the list and the detail page.

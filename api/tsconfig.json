@@ -7,8 +7,13 @@
     // package.json says "type": "module") and reject every one of those imports.
     // Compiled into dist/, core sits under this package's CommonJS scope at
     // runtime. Nest 12's ESM-only packages load through require(esm).
+    //
+    // `bundler` resolution, not `node10`: node10 is deprecated in TypeScript 6
+    // and removed in 7. `bundler` accepts extensionless imports the same way,
+    // and TypeScript 6+ allows it with CommonJS output (5.x did not — hence
+    // TypeScript ~6.0 in package.json).
     "module": "commonjs",
-    "moduleResolution": "node10",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     // Nest's dependency injection reads constructor parameter types from
@@ -25,10 +30,11 @@
     // The repository root, because core is compiled from its source. Output
     // therefore lands at dist/api/src and dist/packages/core/src.
     "rootDir": "..",
-    "baseUrl": ".",
+    // No `baseUrl` (deprecated in 6, removed in 7): `paths` resolve relative to
+    // this file, so every target must start with `./` or `../`.
     "paths": {
       "@core/*": ["../packages/core/src/*"],
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["node"]
   },

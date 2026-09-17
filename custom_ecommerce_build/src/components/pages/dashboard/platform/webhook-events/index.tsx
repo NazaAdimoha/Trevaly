@@ -8,7 +8,7 @@ import { cn, DATE_FORMATS, formatDate } from '@/lib/utils';
 
 import { type IColumn, TableFactory } from '@/components/ui/table-factory';
 
-import type { WebhookStatus } from '@/generated/prisma/enums';
+import type { WebhookStatus } from '@core/enums';
 
 type WebhookEventRow = {
   id: string;

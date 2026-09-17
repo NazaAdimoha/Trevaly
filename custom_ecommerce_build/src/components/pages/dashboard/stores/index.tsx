@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import ROUTES from '@/constant/routes';
-import type { TenantRole, TenantStatus } from '@/generated/prisma/enums';
+import type { TenantRole, TenantStatus } from '@core/enums';
 
 type StoreListItem = {
   tenant: { id: string; name: string; slug: string; status: TenantStatus };

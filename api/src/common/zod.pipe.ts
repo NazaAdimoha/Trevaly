@@ -28,3 +28,25 @@ export class ZodPipe<T> implements PipeTransform<unknown, T> {
     return parsed.data;
   }
 }
+
+/**
+ * Validate inside a handler, for the endpoints where web checked other things
+ * FIRST — a store's status, or a rate limit that must count invalid attempts
+ * too. A pipe runs before the handler body and would change which error a
+ * caller sees.
+ *
+ * `withIssues: false` for endpoints whose web version returned the message
+ * alone.
+ */
+export function parseWith<T>(
+  schema: ZodType<T>,
+  value: unknown,
+  message: string,
+  { withIssues = true }: { withIssues?: boolean } = {},
+): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new ApiException(400, message, withIssues ? { issues: parsed.error.issues } : {});
+  }
+  return parsed.data;
+}

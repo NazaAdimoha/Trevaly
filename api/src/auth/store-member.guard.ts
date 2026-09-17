@@ -55,7 +55,7 @@ export class StoreMemberGuard implements CanActivate {
         where: { slug: storeSlug },
       });
       if (tenant) {
-        req.store = { tenant, role: TenantRole.OWNER, userId };
+        req.store = { tenant, role: TenantRole.OWNER, userId, viaPlatform: true };
         return true;
       }
     }

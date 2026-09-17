@@ -12,7 +12,7 @@ import Button from '@/components/buttons/Button';
 import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
-import { CouponType } from '@/generated/prisma/enums';
+import { CouponType } from '@core/enums';
 
 type Coupon = {
   id: string;

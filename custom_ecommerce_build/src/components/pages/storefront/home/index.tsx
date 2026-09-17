@@ -13,7 +13,7 @@ import { ProductImage } from '@/components/ui/product-image';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 import { themeConfig } from '@/constant/storefront-themes';
-import type { StorefrontTheme } from '@/generated/prisma/enums';
+import type { StorefrontTheme } from '@core/enums';
 
 type ProductCard = {
   id: string;

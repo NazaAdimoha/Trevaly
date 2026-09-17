@@ -2,7 +2,7 @@
 
 import { createContext, type ReactNode, useContext } from 'react';
 
-import type { StorefrontTheme } from '@/generated/prisma/enums';
+import type { StorefrontTheme } from '@core/enums';
 
 /** Branding-safe subset of Tenant. Never expose subaccount codes to the client. */
 export type PublicTenant = {

@@ -5,13 +5,29 @@ import { toast } from '@/components/ui/sonner';
 /**
  * Axios instance for dashboard and storefront calls.
  *
- * Unlike the Ceviant back-office this is not fronting an external service — the
- * API routes live in this same app, so the Clerk session cookie is sent
- * automatically and there is no Bearer token to inject.
+ * Same-origin `/api/*`, which `proxy.ts` forwards to the NestJS API. On the
+ * dashboard the Clerk session token is attached as a Bearer header, the same
+ * way the mobile app authenticates: a fresh token from Clerk's SDK, rather than
+ * a session cookie the API would have to validate across a proxy hop.
+ * Storefront pages load no Clerk, so shoppers send nothing.
  */
 export const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
+});
+
+type ClerkWindow = Window & {
+  Clerk?: { session?: { getToken: () => Promise<string | null> } | null };
+};
+
+api.interceptors.request.use(async (config) => {
+  if (typeof window !== 'undefined') {
+    const token = await (window as ClerkWindow).Clerk?.session
+      ?.getToken()
+      .catch(() => null);
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 api.interceptors.response.use(

@@ -21,8 +21,12 @@ import type { z } from 'zod';
  * failing loudly beats rendering `undefined` in a merchant's order list.
  */
 
-/** The port the Next.js API listens on. Overridable for a non-standard setup. */
-const API_PORT = process.env.EXPO_PUBLIC_API_PORT ?? '3000';
+/**
+ * The port the NestJS API (`api/`) listens on. The app calls it directly with
+ * the same paths the web app's routes used to serve. Overridable for a
+ * non-standard setup.
+ */
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT ?? '4000';
 
 /** Loopback or RFC1918 — an address that only means anything on this network. */
 function isLocalAddress(url: string): boolean {

@@ -23,8 +23,9 @@ type ProductDetail = {
   priceKobo: number;
   stock: number;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  // ISO strings from the API; `formatDate` accepts either.
+  createdAt: Date | string;
+  updatedAt: Date | string;
   category: { name: string } | null;
 };
 

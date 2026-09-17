@@ -16,7 +16,7 @@ import { SelectField } from '@/components/fields/SelectField';
 import { TextAreaField } from '@/components/fields/TextAreaField';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
-import { DeliveryMethod } from '@/generated/prisma/enums';
+import { DeliveryMethod } from '@core/enums';
 
 import {
   checkoutInitialValues,

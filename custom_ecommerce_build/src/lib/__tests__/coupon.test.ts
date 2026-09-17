@@ -7,7 +7,7 @@ import {
   publicCouponRejection,
 } from '@core/validation/coupon';
 
-import { CouponType } from '@/generated/prisma/client';
+import { CouponType } from '@core/enums';
 
 const FUTURE = new Date(Date.now() + 86_400_000);
 const PAST = new Date(Date.now() - 86_400_000);

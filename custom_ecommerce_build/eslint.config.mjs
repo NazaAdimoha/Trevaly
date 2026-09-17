@@ -82,19 +82,19 @@ export default tseslint.config(
   },
 
   {
-    // Tenant isolation guard: route handlers and pages must go through
-    // tenantDb(). Legitimate exceptions carry an inline disable + justification.
-    files: ['src/app/**/*.ts', 'src/app/**/*.tsx'],
+    // The web app has no database and no payment or media secrets: every read
+    // and write goes through the NestJS API (`@/lib/server-api` on the server,
+    // `@/lib/api` in the browser). This keeps it that way.
+    files: ['src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
-          paths: [
+          patterns: [
             {
-              name: '@/lib/prisma',
-              importNames: ['prisma'],
+              group: ['@prisma/*', 'pg', '@/generated/*', '**/generated/prisma/*'],
               message:
-                'Use tenantDb(tenantId) from @/lib/tenant-db for tenant-owned data. Importing the raw client in a route or page is how cross-tenant leaks happen.',
+                'The web app does not talk to the database. Call the API: @/lib/server-api (server) or @/lib/api (browser).',
             },
           ],
         },
@@ -122,33 +122,6 @@ export default tseslint.config(
       'src/components/ui/table-factory.tsx',
     ],
     rules: { 'react-hooks/set-state-in-effect': 'warn' },
-  },
-
-  {
-    /**
-     * `@/generated/prisma/client` carries the Prisma runtime. Importing it from
-     * anything reachable by a client component pulls `node:module` into the
-     * browser bundle and the build fails — confusingly, at the page that
-     * imported it rather than at the import itself.
-     *
-     * Prisma 7 emits a runtime-free `enums` entrypoint for exactly this. View
-     * components take enums from there.
-     */
-    files: ['src/components/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@/generated/prisma/client',
-              message:
-                'Import enums from @/generated/prisma/enums in components — the client entrypoint drags the Prisma runtime into the browser bundle. For row types, declare a local shape instead.',
-            },
-          ],
-        },
-      ],
-    },
   },
 
   {

@@ -12,7 +12,7 @@ import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
 import { STOREFRONT_THEME_OPTIONS } from '@/constant/storefront-themes';
-import type { StorefrontTheme } from '@/generated/prisma/enums';
+import type { StorefrontTheme } from '@core/enums';
 
 type Settings = {
   name: string;

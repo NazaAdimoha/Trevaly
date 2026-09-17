@@ -54,10 +54,20 @@ export default defineConfig({
     },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: 'pnpm dev',
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  // Both halves of the system: the web app forwards every /api request to the
+  // NestJS API, so checkout cannot run without it.
+  webServer: [
+    {
+      command: 'pnpm --dir ../api dev',
+      url: 'http://localhost:4000/api/health',
+      reuseExistingServer: true,
+      timeout: 180_000,
+    },
+    {
+      command: 'pnpm dev',
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
 });

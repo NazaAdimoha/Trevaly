@@ -12,12 +12,15 @@
     "dev": "pnpm build && node --disable-warning=ExperimentalWarning dist/api/src/main.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:generate": "prisma generate --generator api",
-    "db:generate:all": "prisma generate",
+    "db:generate": "prisma generate --generator api && pnpm sync:core",
     "db:status": "prisma migrate status",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "sync:core": "tsx scripts/sync-core-enums.ts",
+    "grant:admin": "tsx scripts/grant-platform-admin.ts",
+    "grant:store": "tsx scripts/grant-store-access.ts",
+    "check:paystack": "tsx scripts/check-paystack.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.67",
@@ -31,7 +34,7 @@
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "zod": "^4.4.3"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@nestjs/testing": "^12.0.3",
@@ -44,7 +47,7 @@
     "supertest": "^7.1.4",
     "tsc-alias": "^1.9.5",
     "tsx": "^4.23.7",
-    "typescript": "^5.8.3",
+    "typescript": "~6.0.3",
     "unplugin-swc": "^1.6.0",
     "vitest": "^4.1.10"
   },

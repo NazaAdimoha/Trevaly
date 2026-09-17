@@ -9,10 +9,10 @@
 // currency math compounds rounding errors across thousands of orders.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Two generators, one schema ───────────────────────────────────────────────
-// The schema is owned by the API (BACKEND_MIGRATION_PLAN 3.5). Each app gets a
-// client generated inside its own root, so each resolves `@prisma/client` from
-// its own node_modules.
+// ── One generator ────────────────────────────────────────────────────────────
+// The API is the only app that talks to the database. The web app and the
+// mobile app reach data through it, and share the enums through
+// `packages/core` (`pnpm db:generate` copies them there).
 //
 // Prisma 7: `prisma-client-js` is deprecated in favour of `prisma-client`, which
 // requires an explicit output path.
@@ -29,18 +29,9 @@ generator api {
   importFileExtension = "js"
 }
 
-// Transitional — the web app still queries Postgres directly until Phase 5.
-// Delete this block in Phase 6, when web stops touching the database.
-// Web generates ONLY this one (`prisma generate --generator web`), so a web
-// build never depends on the API's dependencies being installed.
-generator web {
-  provider = "prisma-client"
-  output   = "../../custom_ecommerce_build/src/generated/prisma"
-}
-
 // Prisma 7 removed `url`/`directUrl` from the schema. Connection URLs for
 // Migrate now live in `prisma.config.ts`, and the runtime client is given a
-// driver adapter (see src/lib/prisma.ts).
+// driver adapter (see src/database/prisma.service.ts).
 datasource db {
   provider = "postgresql"
 }

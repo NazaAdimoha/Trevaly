@@ -43,6 +43,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const req = http.getRequest<Request & { requestId?: string }>();
 
     if (exception instanceof ApiException) {
+      for (const [name, value] of Object.entries(exception.headers)) {
+        res.setHeader(name, value);
+      }
       res.status(exception.getStatus()).json(exception.getResponse());
       return;
     }

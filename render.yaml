@@ -87,6 +87,22 @@ services:
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # sk_live_… in production. Checkout, verification, onboarding and the
+      # webhook signature all use it.
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      # Shared with the web app's INTERNAL_API_KEY (Vercel). Required in
+      # production: the API refuses to boot without it.
+      - key: INTERNAL_API_KEY
+        sync: false
+      # The same value the scheduler sends. Until the Render Cron Job exists,
+      # Vercel Cron calls the web app, which forwards to /api/jobs/expire-orders.
+      - key: CRON_SECRET
+        sync: false
 
   # Shared store for rate limits and the domain cache (security audit
   # finding 8; plan Part 11). Private network only — reachable from services in

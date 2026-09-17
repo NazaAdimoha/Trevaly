@@ -2,11 +2,11 @@ import * as Yup from 'yup';
 
 import { RESERVED_SUBDOMAINS } from '@core/reserved';
 
-import { StorefrontTheme } from '@/generated/prisma/enums';
+import { StorefrontTheme } from '@core/enums';
 
 /**
  * Formik/Yup for the operator filling the form. The API re-validates the same
- * rules with Zod in `@/lib/validation/tenant` — this layer exists to give fast
+ * rules with Zod in `@core/validation/tenant` — this layer exists to give fast
  * feedback, not to be trusted.
  */
 export interface ITenantOnboardingValues {

@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/pageHeader';
 
 import ROUTES from '@/constant/routes';
-import { DeliveryMethod, OrderStatus } from '@/generated/prisma/enums';
+import { DeliveryMethod, OrderStatus } from '@core/enums';
 
 import { ORDER_STATUS_BADGE } from '../constants';
 

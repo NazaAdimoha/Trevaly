@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { apiFetcher } from '@/lib/api';
 
 import ROUTES from '@/constant/routes';
-import type { TenantStatus } from '@/generated/prisma/enums';
+import type { TenantStatus } from '@core/enums';
 
 type PlatformTenant = {
   id: string;

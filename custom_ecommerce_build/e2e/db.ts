@@ -4,14 +4,15 @@ import { Client } from 'pg';
 /**
  * Direct SQL access for E2E assertions.
  *
- * Deliberately not the generated Prisma client: Prisma 7 emits ESM, and
- * Playwright loads spec files through a CommonJS require, so importing it here
- * fails at load time. `pg` is already in the tree as the Prisma driver adapter,
- * and raw SQL is arguably the better assertion anyway — it reads what is
- * actually in the table rather than what our own query layer says is there.
+ * Raw SQL rather than any query layer: it reads what is actually in the table,
+ * not what the code under test says is there. `pg` is a dev dependency of the
+ * web app for this file alone — the app itself has no database access.
+ *
+ * The connection string comes from the API's `.env`: the API owns the database,
+ * and the web app's environment no longer holds one.
  */
 
-config({ path: '.env', quiet: true });
+config({ path: '../api/.env', quiet: true });
 
 export async function sql<T = Record<string, unknown>>(
   text: string,

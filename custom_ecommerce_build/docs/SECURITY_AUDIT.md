@@ -162,6 +162,25 @@ Verified against the running app with four temporary coupons (removed after):
 | does not exist, expired, used up, inactive, below minimum | identical `400` | identical `200 {"valid":false}` |
 | valid (`WELCOME10`) | — | `200`, discount quoted |
 
+### 10. Finding 6 was only fixed on screen — MEDIUM, FIXED
+
+Found while comparing storefront pages before and after the backend moved to
+the API (2026-09-15). The order confirmation page passed the order's full
+`customerEmail` into a Client Component and masked it there, so the full
+address was serialized into the page source for anyone holding the reference.
+The API's `GET /api/storefront/:slug/orders/:reference` now returns only
+`maskedEmail`; the full address never leaves the API for this page. Checked
+against the rendered HTML: the customer address is gone, the store's own public
+contact email is the only address left.
+
+### 11. Internal API reachable through the public proxy — LOW, FIXED
+
+Found during the same verification. The web proxy stamps its internal key on
+every request it forwards, so `/api/internal/domains/:host` answered anyone who
+called it through the public site (it returned which store a custom domain
+belongs to). `proxy.ts` now refuses `/api/internal/*` before forwarding; a
+forged key sent straight to the API gets 401.
+
 ## Deliberately not changed
 
 - **Cloudinary public IDs are unguessable but public.** Product images are meant

@@ -22,11 +22,83 @@ tenant, or a mobile build that stops parsing.
 | What does Next.js keep? | Rendering, `proxy.ts` hostname routing, Clerk session UI, SEO. **No database URL, no Paystack or Cloudinary secret.** |
 | Rough size | ~5–6 engineer-weeks, in seven phases. |
 
-**Git — done 2026-09-14.** The workspace root is now a repository with a
-baseline commit (`461ec2b`) and remote `github.com/NazaAdimoha/Trevaly`
-(public). The push is waiting on the owner authenticating as `NazaAdimoha`; the
-SSH key and saved HTTPS login on the development machine belong to other GitHub
-accounts. Follow-up fixes are on `fix/audit-followups`.
+**Git — done 2026-09-14.** Baseline `461ec2b`, remote
+`github.com/NazaAdimoha/Trevaly` (public). `main` and `fix/audit-followups`
+pushed 2026-09-15.
+
+### Status — 2026-09-15: all backend functionality is in the API (locally)
+
+The owner asked for the whole backend to move at once rather than one group
+per phase. Phases 2–5 were therefore done together, with the phase gates
+replaced by one stronger gate run **before** web was changed: every endpoint
+compared request by request against the running Next implementation.
+
+**What moved**
+
+| | Before | Now |
+| --- | --- | --- |
+| 37 route handlers (24 files) | `custom_ecommerce_build/src/app/api` | `api/src/modules/*` — web's copies deleted |
+| Storefront, dashboard and sitemap reads | Server Components querying Prisma | `@/lib/server-api` → `/api/storefront/:slug/…`, `/api/me`, `/api/stores/:slug` |
+| Custom-domain lookup in `proxy.ts` | Prisma | `GET /api/internal/domains/:host` (internal key), same LRU |
+| Operator scripts (`grant:admin`, `grant:store`, `check:paystack`, `sync:core`) | web | `api/scripts` |
+| Prisma, `pg`, database URL, Paystack and Cloudinary secrets | web | API only. ESLint now fails any `@prisma/*`, `pg` or generated-client import in web. |
+
+`proxy.ts` forwards every `/api/*` request to `API_ORIGIN`, placing a store's
+slug in the path for checkout and coupon preview, and stamping the internal
+key, client IP and original host. `/api/internal/*` is refused at the proxy.
+Web's browser client sends the Clerk token as a Bearer header; mobile calls the
+API directly on port 4000.
+
+**Evidence**
+
+| Check | Result |
+| --- | --- |
+| Contract parity, Next vs Nest, real Clerk sessions, same database (`api/test/parity.live.test.ts`) | 30/30 — every endpoint, access rule, validation message, conflict, Paystack initialization and webhook outcome |
+| Storefront pages rendered through the API vs snapshots from the Prisma version | 11/11 identical: status, title, meta, canonical, JSON-LD, visible text, `sitemap.xml`, `robots.txt` |
+| Playwright checkout suite through web → proxy → API, real Paystack test charges | 7/7 |
+| Every dashboard page as merchant and as SUPER_ADMIN, in a browser | all API calls 2xx; non-member 404; merchant → unauthorized on platform pages |
+| Webhook through the proxy with a whitespace-heavy signed body | verifies (raw bytes intact); tampered signature 401 |
+| Custom domain through the internal lookup | verified domain serves its store; unverified shows not-found |
+
+The parity suite can no longer run against this tree — web has no routes to
+compare. To re-run it, check out `a6281cc` for web and run the API from HEAD.
+
+**Found and fixed by the comparison**
+
+1. Searching orders by phone number returned 500 on web: the digits were also
+   tried as an order number beyond Postgres `integer`. Fixed in the API.
+2. The order confirmation page shipped the customer's **full email** in the
+   page source; only the display was masked (security audit finding 6). The
+   API now returns only the masked address.
+3. The edit-product page never received a product's variants.
+4. `/api/internal/*` was reachable through the public proxy with the proxy's
+   own key attached. Now refused at the proxy.
+
+**Deliberate differences from web**
+
+- Paystack and Cloudinary calls time out (20 s / 30 s) instead of relying on
+  Vercel's function limit.
+- JSON body limit 2 MB, and an oversized body is 413, not 500.
+- `POST /api/checkout` on the platform host is 404 (was 400 "Missing tenant
+  context"); checkout exists only per store.
+- Rate limits are shared across instances when `REDIS_URL` is set (closes audit
+  finding 8 once Key Value exists).
+
+**Still to do — needs the owner's accounts**
+
+1. Render: create the Blueprint, set the secrets it prompts for, measure the
+   Virginia → Neon round trip, confirm `TRUST_PROXY_HOPS`.
+2. Vercel (web): set `API_ORIGIN` and `INTERNAL_API_KEY`; remove
+   `DATABASE_URL`, `DIRECT_URL`, `PAYSTACK_SECRET_KEY`, `CLOUDINARY_API_KEY`,
+   `CLOUDINARY_API_SECRET` and `CLOUDINARY_CLOUD_NAME` from its environment.
+   `CRON_SECRET` must match on both until the Render Cron Job replaces Vercel
+   Cron.
+3. Mobile release build: `EXPO_PUBLIC_API_BASE_URL` → the API's public URL.
+4. The Paystack webhook URL can stay on the web domain (the proxy forwards it
+   byte for byte) or move to the API host directly.
+
+Rollback is a web redeploy of the previous build: that build still has its own
+routes and database access.
 
 ---
 

@@ -60,7 +60,27 @@ const envSchema = z
     CLERK_JWT_KEY: optional(z.string()),
 
     ROOT_DOMAIN: z.string().min(1).default('yourbrand.com'),
+
+    // Checkout, verification, onboarding and the webhook signature all need it,
+    // so the API does not start without it.
+    PAYSTACK_SECRET_KEY: z.string().startsWith('sk_'),
+
     CLOUDINARY_CLOUD_NAME: optional(z.string()),
+    // Signing uploads and importing images. Optional as on web: without them
+    // those two endpoints fail and everything else works.
+    CLOUDINARY_API_KEY: optional(z.string()),
+    CLOUDINARY_API_SECRET: optional(z.string()),
+
+    // Bearer secret for the scheduled job. Unset means the job refuses to run
+    // (503), never that it runs unauthenticated.
+    CRON_SECRET: optional(z.string().min(16)),
+
+    /**
+     * Shared secret between the web proxy and this API. Proves a request came
+     * through the proxy, which is what lets the API trust the client IP it
+     * forwards and answer the internal domain lookup. Never decides a tenant.
+     */
+    INTERNAL_API_KEY: optional(z.string().min(32)),
     MOBILE_MINIMUM_VERSION: z.string().min(1).default('1.0.0'),
 
     CORS_ORIGINS: csv,
@@ -72,6 +92,14 @@ const envSchema = z
     // An in-memory limiter looks present and does not hold across instances —
     // security audit finding 8. Refuse to run production without the shared
     // store rather than degrade silently.
+    if (env.NODE_ENV === 'production' && !env.INTERNAL_API_KEY) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INTERNAL_API_KEY'],
+        message:
+          'INTERNAL_API_KEY is required in production: custom domains and client IPs depend on it',
+      });
+    }
     if (env.NODE_ENV === 'production' && !env.REDIS_URL) {
       ctx.addIssue({
         code: 'custom',

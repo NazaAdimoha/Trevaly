@@ -4,8 +4,6 @@ import { CheckCircle2, Clock, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
-import { maskEmail } from '@core/validation/store-settings';
-
 import { api } from '@/lib/api';
 import { useCart } from '@/lib/store/cart';
 import { formatCurrency } from '@/lib/utils';
@@ -39,7 +37,8 @@ export default function OrderConfirmationView({
     orderNumber: number;
     status: string;
     totalKobo: number;
-    customerEmail: string;
+    /** Masked by the API, e.g. `a•••i@gmail.com`. The full address never reaches this page. */
+    maskedEmail: string;
     paidAfterCancellation: boolean;
   } | null;
 }) {
@@ -183,7 +182,7 @@ export default function OrderConfirmationView({
 
       <p className='mt-4 text-sm text-gray-600'>
         A receipt is on its way to{' '}
-        {order ? maskEmail(order.customerEmail) : 'your email'}.
+        {order ? order.maskedEmail : 'your email'}.
       </p>
 
       <Link

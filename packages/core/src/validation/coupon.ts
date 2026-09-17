@@ -33,10 +33,23 @@ export const couponWriteSchema = z
     path: ["expiresAt"],
   });
 
+/**
+ * What may change on a live coupon.
+ *
+ * `code`, `type` and `value` are deliberately absent. A coupon that has already
+ * been used is a record of a promise made to customers, and silently changing
+ * what "SAVE10" means would rewrite the terms of orders already placed under
+ * it. To change the offer, deactivate this one and make another.
+ *
+ * `minOrderKobo` is allowed: the API route always accepted it, and this copy
+ * did not — the two had drifted (migration plan, Phase 1). The route's
+ * behaviour is what merchants have been using, so it wins.
+ */
 export const couponUpdateSchema = z.object({
   isActive: z.boolean().optional(),
   maxUses: z.number().int().min(1).max(1_000_000).nullable().optional(),
   expiresAt: z.iso.datetime().nullable().optional(),
+  minOrderKobo: z.number().int().min(0).optional(),
 });
 
 export type CouponWritePayload = z.infer<typeof couponWriteSchema>;

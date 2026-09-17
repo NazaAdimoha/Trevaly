@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
 import { requireTenantMember } from '@/lib/auth';
-import { tenantOrigin } from '@/lib/domains/canonical';
 
 import StoreSettingsView from '@/components/pages/dashboard/stores/settings';
 
@@ -13,7 +12,7 @@ export default async function StoreSettingsPage({
   params: Promise<{ storeSlug: string }>;
 }) {
   const { storeSlug } = await params;
-  const { tenant } = await requireTenantMember(storeSlug);
+  const { storefrontUrl } = await requireTenantMember(storeSlug);
 
   return (
     <StoreSettingsView
@@ -21,7 +20,7 @@ export default async function StoreSettingsPage({
       // Resolved on the server: whether a store answers on its own domain or
       // on {slug}.{root} depends on `customDomainVerified`, which the browser
       // has no business knowing.
-      storefrontUrl={tenantOrigin(tenant)}
+      storefrontUrl={storefrontUrl}
     />
   );
 }

@@ -11,12 +11,14 @@ import { HttpException } from '@nestjs/common';
  * @example
  * throw new ApiException(404, 'Store not found');
  * throw new ApiException(409, 'Cannot move an order from PAID to PENDING', { allowed });
+ * throw new ApiException(429, 'Too many attempts', {}, { 'Retry-After': '30' });
  */
 export class ApiException extends HttpException {
   constructor(
     status: number,
-    error: string,
+    error: string | null,
     extra: Record<string, unknown> = {},
+    readonly headers: Record<string, string> = {},
   ) {
     super({ ...extra, error }, status);
   }

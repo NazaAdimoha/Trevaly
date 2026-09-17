@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import useSWR from 'swr';
 
 import { api, apiFetcher, extractErrorMessage } from '@/lib/api';
-import { slugifyTenantName } from '@/lib/validation/tenant';
+import { slugifyTenantName } from '@core/validation/tenant';
 
 import Button from '@/components/buttons/Button';
 import { InputField } from '@/components/fields/InputField';
