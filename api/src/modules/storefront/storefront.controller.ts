@@ -111,6 +111,41 @@ export class StorefrontController {
     return { category, categories, products };
   }
 
+  /**
+   * Product search within one store.
+   *
+   * Name, SKU and description, case-insensitive. Deliberately not a full-text
+   * index: these catalogues are tens to hundreds of products, `contains` is
+   * served fine by Postgres at that size, and a search that needs no extra
+   * infrastructure is a search that cannot be down.
+   *
+   * A term under two characters returns nothing rather than the whole
+   * catalogue — "a" matching every product is not a search result.
+   */
+  @Get('search')
+  @HttpCode(200)
+  async search(@Param('slug') slug: string, @Query('q') q?: string) {
+    const tenant = await this.storefront.publicTenant(slug);
+    const query = typeof q === 'string' ? q.trim().slice(0, 80) : '';
+    if (query.length < 2) return { query, products: [] };
+
+    const products = await tenantDb(this.prisma, tenant.id).product.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { sku: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      include: { variants: true },
+      orderBy: { createdAt: 'desc' },
+      take: 24,
+    });
+
+    return { query, products };
+  }
+
   @Get('products/:productSlug')
   @HttpCode(200)
   async product(@Param('slug') slug: string, @Param('productSlug') productSlug: string) {

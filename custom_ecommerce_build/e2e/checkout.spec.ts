@@ -31,7 +31,7 @@ const normalizeSpaces = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 /** Radix Select is not a native `<select>`, so `selectOption` does not apply. */
 async function chooseFromSelect(page: Page, label: string, option: RegExp) {
-  await page.getByRole('combobox', { name: label }).first().click();
+  await page.locator('main').getByRole('combobox', { name: label }).first().click();
   await page.getByRole('option', { name: option }).first().click();
 }
 
@@ -41,11 +41,14 @@ async function chooseFromSelect(page: Page, label: string, option: RegExp) {
  * never runs, so no request is ever made.
  */
 async function fillCheckoutForm(page: Page) {
-  await page.getByLabel('Full name').fill('E2E Buyer');
-  await page.getByLabel('Email').fill('e2e-buyer@example.com');
-  await page.getByLabel(/phone/i).fill('08031234567');
+  // Scoped to the page's own content: the footer now carries a newsletter
+  // field, so an unscoped `getByLabel('Email')` matches two inputs.
+  const form = page.locator('main');
+  await form.getByLabel('Full name').fill('E2E Buyer');
+  await form.getByLabel('Email').fill('e2e-buyer@example.com');
+  await form.getByLabel(/phone/i).fill('08031234567');
   await chooseFromSelect(page, 'Delivery zone', /Lagos Mainland/);
-  await page.getByLabel(/delivery address/i).fill('12 Test Close, Yaba, Lagos');
+  await form.getByLabel(/delivery address/i).fill('12 Test Close, Yaba, Lagos');
 }
 
 /**
@@ -83,10 +86,9 @@ test.describe('M6 — checkout and payment', () => {
     await page.goto('/products/silk-head-wrap');
     await page.getByRole('button', { name: 'Add to cart' }).click();
     // The cart is client state; navigating before it commits silently starts the
-    // checkout with an empty cart.
-    await expect(
-      page.getByRole('link', { name: /cart, 1 item/i }),
-    ).toBeVisible();
+    // checkout with an empty cart. Since the drawer replaced the cart page link,
+    // the header control is a button that opens it.
+    await expect(page.getByRole('button', { name: /cart, 1 item/i })).toBeVisible();
 
     await page.goto('/checkout');
     await fillCheckoutForm(page);
@@ -160,7 +162,7 @@ test.describe('M6 — checkout and payment', () => {
     await page.getByRole('button', { name: 'M', exact: true }).click();
     await page.getByRole('button', { name: 'Add to cart' }).click();
     await expect(
-      page.getByRole('link', { name: /cart, 1 item/i }),
+      page.getByRole('button', { name: /cart, 1 item/i }),
     ).toBeVisible();
 
     await page.goto('/checkout');

@@ -4,7 +4,7 @@ import type { StorefrontTheme, TenantStatus } from '@core/enums';
 import { defaultLayout, type StorefrontLayout } from '@core/storefront/layout';
 import { presetForTheme } from '@core/storefront/tokens';
 
-import { apiGetOrNull } from '@/lib/server-api';
+import { apiGet, apiGetOrNull } from '@/lib/server-api';
 
 /** A store's public branding and canonical fields, as the API returns them. */
 export type StorefrontTenant = {
@@ -101,4 +101,4 @@ export const getStorefrontLayout = cache(
   },
 );
 
-export { path as storefrontApiPath };
+export { apiGet, path as storefrontApiPath };

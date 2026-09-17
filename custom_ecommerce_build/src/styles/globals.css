@@ -450,6 +450,84 @@
      rule never applies and the content is simply visible — which is the correct
      failure, and the reason none of this is done with an IntersectionObserver
      that would leave content hidden if the script failed. */
+  /* Slide-overs: cart, search, mobile menu. Transform and opacity only, so a
+     panel never costs a layout pass on a mid-range Android. */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes st-fade-in {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes st-slide-right {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: none;
+      }
+    }
+
+    @keyframes st-slide-left {
+      from {
+        transform: translateX(-100%);
+      }
+      to {
+        transform: none;
+      }
+    }
+
+    @keyframes st-slide-down {
+      from {
+        transform: translateY(-100%);
+      }
+      to {
+        transform: none;
+      }
+    }
+
+    .st-backdrop {
+      animation: st-fade-in var(--st-duration-fast, 180ms) var(--st-ease, ease) both;
+    }
+
+    .st-panel[data-side='right'] {
+      animation: st-slide-right var(--st-duration, 420ms) var(--st-ease, ease) both;
+    }
+
+    .st-panel[data-side='left'] {
+      animation: st-slide-left var(--st-duration, 420ms) var(--st-ease, ease) both;
+    }
+
+    .st-panel[data-side='top'] {
+      animation: st-slide-down var(--st-duration, 420ms) var(--st-ease, ease) both;
+    }
+  }
+
+  /* A strip of messages that never stops moving. The track is duplicated so the
+     loop has no seam, and `aria-hidden` on the copy keeps a screen reader from
+     reading the same sentence twice. */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes st-marquee {
+      from {
+        transform: none;
+      }
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    .st-marquee-track {
+      animation: st-marquee var(--st-marquee-duration, 30s) linear infinite;
+    }
+
+    .st-marquee:hover .st-marquee-track {
+      animation-play-state: paused;
+    }
+  }
+
   /* Storefront motion.
      Same rules as the marketing site: CSS only, inside a reduced-motion guard,
      and scroll-driven where the browser supports it so nothing depends on a

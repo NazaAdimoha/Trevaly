@@ -70,6 +70,7 @@ export const STOREFRONT_ROUTES = {
   product: (slug: string) => `/products/${slug}`,
   category: (slug: string) => `/categories/${slug}`,
   cart: '/cart',
+  search: '/search',
   checkout: '/checkout',
   order: (reference: string) => `/order/${reference}`,
 } as const;

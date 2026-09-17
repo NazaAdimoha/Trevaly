@@ -1,18 +1,21 @@
 'use client';
 
-import { ShoppingBag } from 'lucide-react';
-import Link from 'next/link';
-import { type ReactNode, useEffect, useSyncExternalStore } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
-import { cloudinaryUrl } from '@core/media/folder';
 import type { StorefrontLayout } from '@core/storefront/layout';
 
 import { useCart } from '@/lib/store/cart';
 import { useTenant } from '@/lib/tenant-context';
-import { cn } from '@/lib/utils';
 
-import { STOREFRONT_ROUTES } from '@/constant/routes';
-import { storefrontStyle, themeConfig } from '@/constant/storefront-themes';
+import { storefrontStyle } from '@/constant/storefront-themes';
+
+import { AnnouncementBar } from './announcement-bar';
+import { CartDrawer } from './cart-drawer';
+import { StorefrontFooter } from './footer';
+import { StorefrontHeader, type NavItem } from './header';
+import { MobileBar } from './mobile-bar';
+import { MobileMenu } from './mobile-menu';
+import { SearchOverlay } from './search-overlay';
 
 /**
  * Public storefront shell.
@@ -21,19 +24,25 @@ import { storefrontStyle, themeConfig } from '@/constant/storefront-themes';
  * element, so a single stylesheet serves every store on every preset — no
  * per-tenant CSS bundle, and no per-preset one either.
  *
- * `design` comes from the published layout, resolved on the server, so the
- * first paint is already the merchant's palette rather than a default that
- * swaps a moment later.
+ * `design` and `chrome` come from the published layout, resolved on the server,
+ * so the first paint is already the merchant's palette and their navigation
+ * rather than a default that swaps a moment later.
  */
 export default function StorefrontShell({
   children,
   design,
+  chrome,
+  nav,
+  suggestions,
 }: {
   children: ReactNode;
   design?: Pick<StorefrontLayout, 'preset' | 'tokens'>;
+  chrome: Pick<StorefrontLayout, 'announcement' | 'header' | 'footer' | 'mobileBar'>;
+  nav: NavItem[];
+  /** Products offered in an empty cart and in search — never a dead end. */
+  suggestions: { name: string; slug: string; imageUrl: string | null }[];
 }) {
   const tenant = useTenant();
-  const items = useCart((s) => s.items);
   const setTenant = useCart((s) => s.setTenant);
 
   // Scope the persisted cart to this store, so two storefronts open in the same
@@ -42,128 +51,33 @@ export default function StorefrontShell({
     setTenant(tenant.slug);
   }, [tenant.slug, setTenant]);
 
-  // The cart lives in localStorage, so its count differs between server and
-  // first client render. `useSyncExternalStore` returns the server snapshot
-  // during hydration and the client one after — no setState in an effect, which
-  // React 19 flags as a cascading render.
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
-
-  const count = items.reduce((total, item) => total + item.quantity, 0);
-  const theme = themeConfig(tenant.theme);
-  const centred = theme.headerAlign === 'center';
-
-  // Sized generously (2x the tallest theme logo height) and left to the theme's
-  // CSS to scale down — one URL for every theme beats a render-time lookup.
-  const logoSrc = cloudinaryUrl(
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-    tenant.logoPublicId,
-    { width: 320 },
-  );
-
   return (
     <div
       className='st-root flex min-h-screen flex-col'
       style={storefrontStyle(design ?? null, tenant.theme, tenant.primaryColor)}
     >
-      <header
-        className='st-hairline sticky top-0 z-30 border-b backdrop-blur'
-        style={{ background: 'color-mix(in srgb, var(--st-bg) 92%, transparent)' }}
-      >
-        <div
-          className='st-container flex items-center'
-          style={{ paddingBlock: 'var(--st-header-pad)' }}
-        >
-          {/* A centred wordmark is the one structural difference between the
-              themes' headers. The cart stays pinned right in both, because a
-              shopper looks for it in the same place on every store. */}
-          <Link
-            href={STOREFRONT_ROUTES.home}
-            className={cn(
-              'flex items-center gap-2',
-              centred ? 'flex-1 justify-center pl-8' : 'flex-1',
-            )}
-          >
-            {logoSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element -- a Cloudinary delivery URL sized by the theme's logo height; next/image would re-optimise an already-optimised asset
-              <img
-                src={logoSrc}
-                alt={tenant.name}
-                className='w-auto'
-                style={{ height: 'var(--st-logo-height)' }}
-              />
-            ) : (
-              <span
-                className='st-display'
-                style={{ fontSize: 'calc(var(--st-logo-height) * 0.62)' }}
-              >
-                {tenant.name}
-              </span>
-            )}
-          </Link>
+      <AnnouncementBar announcement={chrome.announcement} storeSlug={tenant.slug} />
 
-          <Link
-            href={STOREFRONT_ROUTES.cart}
-            className='relative flex shrink-0 items-center gap-2 text-sm'
-            aria-label={`Cart, ${count} item${count === 1 ? '' : 's'}`}
-          >
-            <ShoppingBag className='size-5' />
-            {mounted && count > 0 ? (
-              <span
-                className='absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full text-xs font-medium'
-                style={{
-                  backgroundColor: 'var(--st-accent)',
-                  color: 'var(--st-accent-ink)',
-                }}
-              >
-                {count}
-              </span>
-            ) : null}
-          </Link>
-        </div>
-        {/* A hairline, not a band. A full-bleed header in an unreviewed tenant
-            hex is the failure mode the brief warns about; 2px of it is not. */}
-        {theme.brandRule ? (
-          <div
-            className='h-0.5 w-full'
-            style={{ backgroundColor: 'var(--brand)' }}
-          />
-        ) : null}
-      </header>
+      <StorefrontHeader
+        header={chrome.header}
+        nav={nav}
+        announcementOffset={chrome.announcement.enabled}
+      />
 
       <main className='flex-1'>{children}</main>
 
-      <footer className='st-surface st-hairline mt-16 border-t'>
-        <div className='st-container st-muted py-10 text-sm'>
-          <p className='st-display text-base' style={{ color: 'var(--st-ink)' }}>
-            {tenant.name}
-          </p>
-          {tenant.tagline ? <p className='mt-1'>{tenant.tagline}</p> : null}
-          <div className='mt-3 flex flex-wrap gap-4'>
-            {tenant.contactEmail ? (
-              <a
-                href={`mailto:${tenant.contactEmail}`}
-                className='hover:underline'
-              >
-                {tenant.contactEmail}
-              </a>
-            ) : null}
-            {tenant.whatsappNumber ? (
-              <a
-                href={`https://wa.me/${tenant.whatsappNumber.replace(/\D/g, '')}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='hover:underline'
-              >
-                WhatsApp
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </footer>
+      <StorefrontFooter footer={chrome.footer} />
+
+      {/* Room for the bottom bar, so a footer link is never underneath it. */}
+      {chrome.mobileBar.enabled ? <div className='h-14 lg:hidden' aria-hidden /> : null}
+
+      <MobileBar bar={chrome.mobileBar} />
+      <CartDrawer
+        freeShippingThresholdKobo={chrome.announcement.freeShippingThresholdKobo}
+        suggestions={suggestions}
+      />
+      <MobileMenu nav={nav} />
+      <SearchOverlay suggestions={suggestions} />
     </div>
   );
 }

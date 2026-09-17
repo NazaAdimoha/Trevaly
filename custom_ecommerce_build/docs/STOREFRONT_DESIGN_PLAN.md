@@ -321,7 +321,7 @@ Each phase ships something a merchant can see.
 | Phase | Scope | Outcome |
 | --- | --- | --- |
 | **1. Foundation** ✅ **done 2026-09-17** | Widened tokens, 4 presets, motion primitives, `StorefrontLayout` model + registry + API, section renderer | Stores render from their own layout; palettes, type and spacing come from a preset |
-| **2. Chrome** (~1 wk) | Header (3 layouts, mega menu, mobile overlay), announcement bar, footer, mobile bottom bar, drawer cart | The store stops looking like a demo; navigation exists |
+| **2. Chrome** ✅ **done 2026-09-17** | Header (3 layouts, mega menu, mobile overlay), announcement bar, footer, mobile bottom bar, drawer cart, search | The store stops looking like a demo; navigation exists |
 | **3. Home sections** (~1.5 wk) | Hero (+ hotspots), slideshow, collection row (+ ranked), tabbed products, category tiles, promo tiles, marquee, countdown, rich text, image+text, FAQ, press, UGC, newsletter | Composed home pages, seeded per preset |
 | **4. Product & collection** (~1 wk) | Gallery, swatches, size grid, sticky ATC, urgency, trust, pairs-well-with, description accordion; filters, sort, density, sub-collection pills | The two pages that convert |
 | **5. Mobile editor** (~1.5 wk) | Design section of the app: appearance, section list with reorder, generated forms, image/hotspot pickers, preview WebView, publish/revert | The ask: a merchant designs their store from their phone |
@@ -363,6 +363,40 @@ Decisions taken while building, worth knowing:
   dropped with a logged reason; the page still renders.
 - **Media ids in a layout are ownership-checked**, closing the same hole product
   images and logos already close.
+
+---
+
+## Phase 2 — what shipped (2026-09-17)
+
+The store now has the parts a shopper uses on every visit, none of which
+existed before.
+
+| Piece | Behaviour worth knowing |
+| --- | --- |
+| Header (`header.tsx`) | Three layouts — classic, centred, floating pill. Transparent over a hero until the shopper scrolls. Mega menu opens on hover **and focus**, so it is reachable without a mouse. The cart control never moves between layouts. |
+| Navigation | Merchant menu if they built one, **their categories if they did not** — the fallback matters more than the builder, because until now a store had no navigation at all. |
+| Announcement bar | Rotates through messages, links, dismissible per browser. Read through `useSyncExternalStore`, so it does not render and then vanish on hydration. |
+| Cart drawer (`cart-drawer.tsx`) | Opens over the page instead of navigating. Free-delivery progress bar from the merchant's own threshold, quantity steppers, stock ceiling message, subtotal, checkout. Empty state offers products rather than dead-ending. `/cart` still works as a URL. |
+| Search | New `GET /storefront/:slug/search` (name, SKU, description; two-character minimum) plus a `/search?q=` page — a shareable URL, `noindex`. |
+| Mobile menu | Full-height panel, sections expand in place, with the merchant's imagery when a menu has any. |
+| Mobile bottom bar | Home, Menu, Search, Cart — where a thumb already is. `account` stays out of the default: there are no customer accounts, and a tab that leads nowhere is worse than one fewer tab. |
+| Footer | Newsletter, link columns, contact, socials, oversized wordmark, payment marks drawn inline (six logo files is six requests for reassurance). |
+| Drawer primitive (`drawer.tsx`) | Escape closes, focus is trapped inside and returned to whatever opened it, the page behind does not scroll. Hand-written, because that behaviour is the whole of what a library would sell us. |
+
+Verified by `e2e/storefront-chrome.spec.ts` (4 tests, real browser): navigation
+reaches a category, adding to the cart opens the drawer **without leaving the
+page**, Escape returns focus to the cart button, search lands on a shareable
+URL, and on a 390px viewport the bottom bar and full-screen menu work. The
+checkout suite still passes 7/7 against the real Paystack test gateway.
+
+Two changes the tests caught, both worth keeping:
+
+- **The cart control is a button now, not a link.** It opens the drawer. The
+  checkout E2E asserted the old role and had to be updated — a real contract
+  change, not a test fix.
+- **Two "Email" labels on the checkout page** once the footer gained a
+  newsletter field. The footer's is now "Email address for updates"; an
+  ambiguous label is an accessibility problem before it is a test problem.
 
 ---
 

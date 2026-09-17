@@ -111,10 +111,15 @@ export const footerSchema = z
 export const mobileBarSchema = z
   .object({
     enabled: z.boolean().default(true),
+    /**
+     * `account` stays in the enum for when customers can sign in, but it is not
+     * in the default: a tab that leads nowhere is worse than one fewer tab.
+     * Four is also the point at which labels stay readable at 390px.
+     */
     items: z
       .array(z.enum(["home", "menu", "search", "shop", "cart", "account"]))
       .max(5)
-      .default(["home", "shop", "search", "cart", "account"]),
+      .default(["home", "menu", "search", "cart"]),
   })
   .strict();
 

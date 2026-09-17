@@ -11,7 +11,12 @@ import { type PublicTenant, TenantProvider } from '@/lib/tenant-context';
 import JsonLd from '@/components/JsonLd';
 import StorefrontShell from '@/components/Layouts/Storefront';
 
-import { getStorefrontLayout, resolveStorefrontTenant } from '@/app/sites/_tenant';
+import {
+  getStorefrontCatalog,
+  getStorefrontLayout,
+  resolveStorefrontTenant,
+} from '@/app/sites/_tenant';
+import { STOREFRONT_ROUTES } from '@/constant/routes';
 
 /**
  * Root of every tenant storefront.
@@ -123,7 +128,40 @@ export default async function TenantLayout({
 
   if (!tenant) notFound();
 
-  const layout = await getStorefrontLayout(slug, tenant.theme);
+  const [layout, catalog] = await Promise.all([
+    getStorefrontLayout(slug, tenant.theme),
+    getStorefrontCatalog(slug),
+  ]);
+
+  /**
+   * Navigation: what the merchant built, or their categories.
+   *
+   * The fallback matters more than the feature. Most stores will never open the
+   * menu builder, and a shop with no way into its own categories is the state
+   * ours has been in until now.
+   */
+  const nav =
+    layout.header.menu.length > 0
+      ? layout.header.menu.map((item) => ({
+          label: item.label,
+          href: item.href,
+          children: item.children.map((child) => ({
+            label: child.label,
+            href: child.href,
+            image: child.image ?? null,
+          })),
+        }))
+      : (catalog?.categories ?? []).slice(0, 6).map((category) => ({
+          label: category.name,
+          href: STOREFRONT_ROUTES.category(category.slug),
+          children: [],
+        }));
+
+  const suggestions = (catalog?.products ?? []).slice(0, 6).map((product) => ({
+    name: product.name,
+    slug: product.slug,
+    imageUrl: product.imageUrls[0] ?? null,
+  }));
 
   const logoUrl = cloudinaryUrl(
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -174,7 +212,17 @@ export default async function TenantLayout({
       {/* All three font variables are declared; only the family the tenant's
           theme references is ever matched, so only that one is downloaded. */}
       <div className={FONT_VARIABLES}>
-        <StorefrontShell design={{ preset: layout.preset, tokens: layout.tokens }}>
+        <StorefrontShell
+          design={{ preset: layout.preset, tokens: layout.tokens }}
+          chrome={{
+            announcement: layout.announcement,
+            header: layout.header,
+            footer: layout.footer,
+            mobileBar: layout.mobileBar,
+          }}
+          nav={nav}
+          suggestions={suggestions}
+        >
           {children}
         </StorefrontShell>
       </div>

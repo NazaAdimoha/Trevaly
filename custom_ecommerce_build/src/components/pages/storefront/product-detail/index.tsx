@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 
 import {
   activeVariants,
@@ -13,6 +12,7 @@ import {
 } from '@core/variants';
 
 import { useCart } from '@/lib/store/cart';
+import { useStorefrontUi } from '@/lib/store/ui';
 import { useTenant } from '@/lib/tenant-context';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -39,6 +39,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
   const tenant = useTenant();
   const theme = themeConfig(tenant.theme);
   const addItem = useCart((s) => s.addItem);
+  const openCart = useStorefrontUi((s) => s.open);
   const [quantity, setQuantity] = useState(1);
 
   const options = activeVariants(product);
@@ -77,12 +78,16 @@ export default function ProductDetailView({ product }: { product: Product }) {
       },
       quantity,
     );
-    toast.success(
-      selected
-        ? `${product.name} (${selected.value}) added to cart`
-        : `${product.name} added to cart`,
-    );
-    if (goToCart) router.push(STOREFRONT_ROUTES.cart);
+    if (goToCart) {
+      // "Buy it now" means checkout, not a look at the cart.
+      router.push(STOREFRONT_ROUTES.checkout);
+      return;
+    }
+
+    // The drawer IS the confirmation: it shows the line that was just added,
+    // the running total, and the way to checkout. A toast on top of it would
+    // say the same thing twice.
+    openCart('cart');
   };
 
   return (
