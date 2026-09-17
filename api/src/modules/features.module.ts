@@ -16,6 +16,8 @@ import { PlatformController } from './platform/platform.controller';
 import { CouponsController } from './promotions/coupons.controller';
 import { OverviewService } from './stores/overview.service';
 import { StoresController } from './stores/stores.controller';
+import { StorefrontLayoutController } from './storefront/layout.controller';
+import { StorefrontLayoutService } from './storefront/layout.service';
 import { StorefrontController } from './storefront/storefront.controller';
 import { StorefrontService } from './storefront/storefront.service';
 
@@ -40,9 +42,16 @@ import { StorefrontService } from './storefront/storefront.service';
     PlatformController,
     PaymentsController,
     StorefrontController,
+    StorefrontLayoutController,
     InternalController,
     JobsController,
   ],
-  providers: [FulfillmentService, WebhookEventsService, OverviewService, StorefrontService],
+  providers: [
+    FulfillmentService,
+    WebhookEventsService,
+    OverviewService,
+    StorefrontService,
+    StorefrontLayoutService,
+  ],
 })
 export class FeaturesModule {}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Archivo, Newsreader, Schibsted_Grotesk } from 'next/font/google';
+import { Archivo, Fredoka, Newsreader, Schibsted_Grotesk } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -11,7 +11,7 @@ import { type PublicTenant, TenantProvider } from '@/lib/tenant-context';
 import JsonLd from '@/components/JsonLd';
 import StorefrontShell from '@/components/Layouts/Storefront';
 
-import { resolveStorefrontTenant } from '@/app/sites/_tenant';
+import { getStorefrontLayout, resolveStorefrontTenant } from '@/app/sites/_tenant';
 
 /**
  * Root of every tenant storefront.
@@ -32,34 +32,43 @@ import { resolveStorefrontTenant } from '@/app/sites/_tenant';
  * blocks in the CSS. `next/font` still generates a metric-matched fallback for
  * each, so the swap does not move the layout.
  */
-const classicFont = Schibsted_Grotesk({
+const groteskFont = Schibsted_Grotesk({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
-  variable: '--font-st-classic',
+  variable: '--font-st-grotesk',
   display: 'swap',
   preload: false,
 });
 
-const editorialFont = Newsreader({
+const serifFont = Newsreader({
   subsets: ['latin'],
   weight: ['300', '400', '500'],
-  variable: '--font-st-editorial',
+  variable: '--font-st-serif',
   display: 'swap',
   preload: false,
 });
 
 const utilityFont = Archivo({
   subsets: ['latin'],
-  weight: ['400', '500', '700'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-st-utility',
   display: 'swap',
   preload: false,
 });
 
+const roundedFont = Fredoka({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-st-rounded',
+  display: 'swap',
+  preload: false,
+});
+
 const FONT_VARIABLES = [
-  classicFont.variable,
-  editorialFont.variable,
+  groteskFont.variable,
+  serifFont.variable,
   utilityFont.variable,
+  roundedFont.variable,
 ].join(' ');
 
 export async function generateMetadata({
@@ -114,6 +123,8 @@ export default async function TenantLayout({
 
   if (!tenant) notFound();
 
+  const layout = await getStorefrontLayout(slug, tenant.theme);
+
   const logoUrl = cloudinaryUrl(
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
     tenant.logoPublicId,
@@ -163,7 +174,9 @@ export default async function TenantLayout({
       {/* All three font variables are declared; only the family the tenant's
           theme references is ever matched, so only that one is downloaded. */}
       <div className={FONT_VARIABLES}>
-        <StorefrontShell>{children}</StorefrontShell>
+        <StorefrontShell design={{ preset: layout.preset, tokens: layout.tokens }}>
+          {children}
+        </StorefrontShell>
       </div>
     </TenantProvider>
   );

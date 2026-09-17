@@ -5,22 +5,33 @@ import Link from 'next/link';
 import { type ReactNode, useEffect, useSyncExternalStore } from 'react';
 
 import { cloudinaryUrl } from '@core/media/folder';
+import type { StorefrontLayout } from '@core/storefront/layout';
 
 import { useCart } from '@/lib/store/cart';
 import { useTenant } from '@/lib/tenant-context';
 import { cn } from '@/lib/utils';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
-import { themeConfig, themeStyle } from '@/constant/storefront-themes';
+import { storefrontStyle, themeConfig } from '@/constant/storefront-themes';
 
 /**
  * Public storefront shell.
  *
- * Both the tenant's colour and its theme arrive as CSS custom properties on
- * this one element, so a single stylesheet serves every store on every theme —
- * no per-tenant CSS bundle, and no per-theme one either.
+ * The store's whole design arrives as CSS custom properties on this one
+ * element, so a single stylesheet serves every store on every preset — no
+ * per-tenant CSS bundle, and no per-preset one either.
+ *
+ * `design` comes from the published layout, resolved on the server, so the
+ * first paint is already the merchant's palette rather than a default that
+ * swaps a moment later.
  */
-export default function StorefrontShell({ children }: { children: ReactNode }) {
+export default function StorefrontShell({
+  children,
+  design,
+}: {
+  children: ReactNode;
+  design?: Pick<StorefrontLayout, 'preset' | 'tokens'>;
+}) {
   const tenant = useTenant();
   const items = useCart((s) => s.items);
   const setTenant = useCart((s) => s.setTenant);
@@ -55,12 +66,15 @@ export default function StorefrontShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className='st-root flex min-h-screen flex-col bg-white'
-      style={themeStyle(tenant.theme, tenant.primaryColor)}
+      className='st-root flex min-h-screen flex-col'
+      style={storefrontStyle(design ?? null, tenant.theme, tenant.primaryColor)}
     >
-      <header className='sticky top-0 z-30 border-b bg-white/95 backdrop-blur'>
+      <header
+        className='st-hairline sticky top-0 z-30 border-b backdrop-blur'
+        style={{ background: 'color-mix(in srgb, var(--st-bg) 92%, transparent)' }}
+      >
         <div
-          className='mx-auto flex max-w-6xl items-center px-4'
+          className='st-container flex items-center'
           style={{ paddingBlock: 'var(--st-header-pad)' }}
         >
           {/* A centred wordmark is the one structural difference between the
@@ -83,12 +97,8 @@ export default function StorefrontShell({ children }: { children: ReactNode }) {
               />
             ) : (
               <span
-                className='font-semibold'
-                style={{
-                  fontSize: 'calc(var(--st-logo-height) * 0.56)',
-                  textTransform: 'var(--st-name-transform)' as 'none',
-                  letterSpacing: 'var(--st-name-tracking)',
-                }}
+                className='st-display'
+                style={{ fontSize: 'calc(var(--st-logo-height) * 0.62)' }}
               >
                 {tenant.name}
               </span>
@@ -103,8 +113,11 @@ export default function StorefrontShell({ children }: { children: ReactNode }) {
             <ShoppingBag className='size-5' />
             {mounted && count > 0 ? (
               <span
-                className='absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full text-xs font-medium text-white'
-                style={{ backgroundColor: 'var(--brand)' }}
+                className='absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full text-xs font-medium'
+                style={{
+                  backgroundColor: 'var(--st-accent)',
+                  color: 'var(--st-accent-ink)',
+                }}
               >
                 {count}
               </span>
@@ -123,9 +136,11 @@ export default function StorefrontShell({ children }: { children: ReactNode }) {
 
       <main className='flex-1'>{children}</main>
 
-      <footer className='mt-16 border-t bg-gray-50'>
-        <div className='mx-auto max-w-6xl px-4 py-8 text-sm text-gray-600'>
-          <p className='font-medium text-gray-900'>{tenant.name}</p>
+      <footer className='st-surface st-hairline mt-16 border-t'>
+        <div className='st-container st-muted py-10 text-sm'>
+          <p className='st-display text-base' style={{ color: 'var(--st-ink)' }}>
+            {tenant.name}
+          </p>
           {tenant.tagline ? <p className='mt-1'>{tenant.tagline}</p> : null}
           <div className='mt-3 flex flex-wrap gap-4'>
             {tenant.contactEmail ? (

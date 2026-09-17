@@ -35,6 +35,7 @@ const TENANT_SCOPED_MODELS = new Set([
   'DeliveryZone',
   'Coupon',
   'Order',
+  'StorefrontLayout',
   // Platform revenue, not tenant data — a tenant must never read it. It is
   // listed here anyway: the table carries a `tenantId`, so anything reaching it
   // through `tenantDb` would otherwise return every tenant's earnings. Platform

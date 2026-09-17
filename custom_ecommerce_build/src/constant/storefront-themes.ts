@@ -1,4 +1,10 @@
 import { StorefrontTheme } from '@core/enums';
+import type { StorefrontLayout } from '@core/storefront/layout';
+import {
+  presetForTheme,
+  resolveTokens,
+  tokensToCssVars,
+} from '@core/storefront/tokens';
 
 /**
  * Storefront themes — the token sets behind `Tenant.theme`.
@@ -205,16 +211,27 @@ export function themeConfig(
 }
 
 /**
- * The custom properties for a theme, as a style object for the storefront root.
- * `--brand` is merged in here so there is one place that decides what the
- * storefront's CSS variables are.
+ * The custom properties for a storefront, as a style object for its root.
+ *
+ * Every visual decision a store makes arrives through this one function: the
+ * preset's tokens, whatever the merchant overrode, and their brand colour. The
+ * old per-theme `vars` blocks above are now only consulted for the handful of
+ * structural flags CSS cannot express (`headerAlign`, `showSku`), and go away
+ * when the header is rebuilt.
  */
-export function themeStyle(
+export function storefrontStyle(
+  layout: Pick<StorefrontLayout, 'preset' | 'tokens'> | null,
   theme: StorefrontTheme | null | undefined,
   primaryColor: string | null,
 ): React.CSSProperties {
-  return {
-    ...themeConfig(theme).vars,
-    '--brand': primaryColor ?? '#111827',
-  } as React.CSSProperties;
+  // A store with no layout yet still gets a preset — mapped from the theme it
+  // chose at onboarding — so nothing renders unstyled while Phase 1 rolls out.
+  const preset = layout?.preset ?? presetForTheme(theme);
+  const tokens = resolveTokens(preset, {
+    ...layout?.tokens,
+    // The brand colour IS the accent unless the merchant set one explicitly.
+    accent: layout?.tokens?.accent ?? primaryColor ?? undefined,
+  });
+
+  return tokensToCssVars(tokens, primaryColor) as React.CSSProperties;
 }

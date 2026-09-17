@@ -89,7 +89,6 @@ export default async function StorefrontCategoryPage({ params }: RouteParams) {
       </h1>
       <ProductGrid
         products={products}
-        theme={tenant.theme}
         storeName={tenant.name}
         emptyMessage={`No ${category.name.toLowerCase()} in stock right now.`}
       />

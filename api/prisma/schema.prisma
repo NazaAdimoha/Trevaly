@@ -166,6 +166,7 @@ model Tenant {
   orders        Order[]
   coupons       Coupon[]
   deliveryZones DeliveryZone[]
+  storefront    StorefrontLayout?
 
   @@index([slug])
   @@index([customDomain])
@@ -175,6 +176,34 @@ model Tenant {
 // Membership. Clerk owns the credential; this table owns "who may act for whom".
 // Deliberately NOT Clerk Organizations — see BUILD_PLAN.md D3 (org-count
 // pricing is misaligned with a 50-new-tenants/month business).
+/// How a storefront looks, as data: which preset, which sections, in what order.
+///
+/// Two copies per store. `draft` is what the merchant edits from their phone;
+/// `published` is what shoppers see. A half-finished hero therefore cannot
+/// reach a customer, and reverting is reading a column rather than an undo log.
+///
+/// Both are Json because the shape is the section registry in `packages/core`,
+/// which changes far more often than a database should. Validation happens
+/// there, on the way in AND on the way out.
+model StorefrontLayout {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  draft     Json
+  published Json?
+
+  /// Bumped on every draft save. The app sends the version it loaded, so two
+  /// devices editing one store cannot silently overwrite each other.
+  version     Int       @default(1)
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
 model TenantUser {
   id          String     @id @default(cuid())
   tenantId    String

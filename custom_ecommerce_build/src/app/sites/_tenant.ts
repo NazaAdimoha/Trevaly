@@ -1,6 +1,8 @@
 import { cache } from 'react';
 
 import type { StorefrontTheme, TenantStatus } from '@core/enums';
+import { defaultLayout, type StorefrontLayout } from '@core/storefront/layout';
+import { presetForTheme } from '@core/storefront/tokens';
 
 import { apiGetOrNull } from '@/lib/server-api';
 
@@ -81,6 +83,22 @@ export const getStorefrontCatalog = cache((slug: string, categorySlug?: string) 
 
 export const getStorefrontProduct = cache((slug: string, productSlug: string) =>
   apiGetOrNull<StorefrontProduct>(path(slug, `/products/${encodeURIComponent(productSlug)}`)),
+);
+
+/**
+ * How this store is designed: preset, token overrides, and the sections of each
+ * page. Cached per request — the root layout and the page beneath it both need
+ * it, and that must cost one call.
+ *
+ * A failed lookup falls back to the preset the store's theme implies rather
+ * than throwing. A design service having a bad minute must not take a shop
+ * offline; it should cost that request its custom arrangement, nothing more.
+ */
+export const getStorefrontLayout = cache(
+  async (slug: string, theme: StorefrontTheme | null): Promise<StorefrontLayout> => {
+    const response = await apiGetOrNull<{ layout: StorefrontLayout }>(path(slug, '/layout'));
+    return response?.layout ?? defaultLayout(presetForTheme(theme));
+  },
 );
 
 export { path as storefrontApiPath };

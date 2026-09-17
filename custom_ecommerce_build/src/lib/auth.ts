@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { notFound, redirect } from 'next/navigation';
 import { cache } from 'react';
 
+import type { MyStoresResponse } from '@core/api/contracts';
 import type {
   PlatformRole,
   StorefrontTheme,
@@ -9,9 +10,8 @@ import type {
   TenantStatus,
 } from '@core/enums';
 import { TenantRole as TenantRoles } from '@core/enums';
-import type { MyStoresResponse } from '@core/api/contracts';
 
-import { ApiRequestError, apiGet } from '@/lib/server-api';
+import { apiGet,ApiRequestError } from '@/lib/server-api';
 
 import ROUTES from '@/constant/routes';
 

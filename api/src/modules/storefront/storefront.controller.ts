@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 
@@ -18,6 +29,7 @@ import { tenantDb } from '../../database/tenant-db';
 import { DeliveryMethod, OrderStatus, TenantStatus } from '../../generated/prisma/enums';
 import { PaystackService } from '../../integrations/paystack.service';
 
+import { StorefrontLayoutService } from './layout.service';
 import { StorefrontService } from './storefront.service';
 
 /**
@@ -35,6 +47,7 @@ export class StorefrontController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storefront: StorefrontService,
+    private readonly layouts: StorefrontLayoutService,
     private readonly rateLimit: RateLimitService,
     private readonly paystack: PaystackService,
     @Inject(ENV) private readonly env: Env,
@@ -45,6 +58,22 @@ export class StorefrontController {
   @HttpCode(200)
   tenant(@Param('slug') slug: string) {
     return this.storefront.publicTenant(slug);
+  }
+
+  /**
+   * How this store is designed: preset, tokens and the sections of each page.
+   *
+   * Separate from the tenant read because it is the one thing a merchant
+   * changes often, and because the storefront asks for it on every page — a
+   * shopper who has just been redesigned around should see it immediately, so
+   * this is deliberately not cached.
+   */
+  @Get('layout')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  async layout(@Param('slug') slug: string) {
+    const tenant = await this.storefront.publicTenant(slug);
+    return { layout: await this.layouts.published(tenant) };
   }
 
   /**
