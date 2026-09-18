@@ -445,6 +445,87 @@ considering, but it is a different project from this one.
 
 ---
 
+## What shipped — Phase 4: the product and collection pages
+
+These are the two pages that convert. Everything below answers a question that
+otherwise sends a shopper back to the catalogue or into WhatsApp.
+
+### The product page
+
+| What | Why it is there |
+| --- | --- |
+| Gallery with thumbnails — beside the image from `md`, beneath it on a phone | "What does it look like from the other side" was previously unanswerable: the page showed one photograph |
+| Breadcrumbs, with the collection in them | A shopper who arrives from Google has no way back into the shop otherwise |
+| Size grid, sold-out options **struck through rather than hidden** | Hiding a size makes a shopper wonder whether the store stocks it at all; striking it through tells them it exists and is gone |
+| "Only N left", shown only under 10 | Urgency that is sometimes false is worse than none |
+| Quantity stepper, add-to-cart → drawer, Buy-it-now → checkout | The drawer IS the confirmation — it shows the line, the running total and the way out |
+| Delivery / returns / Paystack, next to the button | The three questions asked after "does it fit" |
+| Native share with a clipboard fallback | On a phone the native sheet means WhatsApp, which is how these links actually travel |
+| Sticky buy bar, appearing only once the real button scrolls away | Never duplicates a control already on screen |
+| "More in {collection}" | Arrives on the same API response as the product, so a dead end becomes a second page view for the cost of markup |
+| Merchant sections under `pages.product` | The size guide, the care note, the delivery promise — whatever that shop needs to say about every product |
+
+The sticky bar's button used to read "Choose size" and be **disabled**. That
+names the problem and then refuses to help with it; on a phone it means
+scrolling back up hunting for the control it meant. It now scrolls the sizes
+into view and focuses the first one that can actually be bought.
+
+### The collection page
+
+Sub-collection pills, an item count, sort, an in-stock filter, and a density
+toggle — **every one of them a link, and the whole toolbar a Server Component.**
+
+That is not purity. A filtered collection has to be a URL: it is how a merchant
+sends "the bags under ₦20,000" to a customer, how the back button behaves, and
+how the page gets indexed. A client-side filter would also be *lying* — it can
+only reorder the products already on the page, so "price, low to high" over the
+first 60 of 200 products shows the cheapest of a slice, not the cheapest in the
+shop. Sorting and filtering are therefore the API's job:
+`/catalog?sort=&inStock=&limit=` now does both, and returns `total` counted
+**before** the limit, so a collection of 90 does not announce "60 items".
+
+Density is three custom properties on a wrapper — the grid already reads its
+column counts from tokens, so "show me more per row" costs no CSS and no
+JavaScript.
+
+The sort and filter parameters are deliberately left **out of the canonical
+URL**: they are the same products in a different order, and indexing each
+permutation splits a page's ranking between four copies of itself.
+
+### What proved it
+
+`test/storefront-catalog.test.ts` (8 tests) builds its own fixture rather than
+using the seed store, because the interesting cases are the ones a healthy shop
+does not have: something sold out, something whose parent stock is zero but
+which still has a live size, something whose only in-stock variant has been
+switched off. **A filter is only proved by what it excludes**, and the seeded
+catalogue excludes nothing. `e2e/storefront-shopping.spec.ts` (6 tests) checks
+that a sort really reorders the grid rather than decorating a button, that
+density changes the column count, and that the sticky bar waits its turn.
+
+### The JavaScript cost
+
+Measured against production builds of this commit and of Phase 3, summing every
+chunk the page loads, gzipped — **excluding Next's `nomodule` polyfill bundle,
+which no browser that supports modules ever downloads.** (Counting it inflates
+every figure by 38.5KB; it is the difference between the numbers below and a
+naive "sum the script tags" reading.)
+
+| Page | Phase 3 | Phase 4 | Δ |
+| --- | --- | --- | --- |
+| Home | 158.8KB | 158.9KB | +0.1KB |
+| Collection | 155.3KB | 158.9KB | +3.6KB |
+| Product | 157.5KB | 161.5KB | +4.0KB |
+| Cart | 156.7KB | 156.8KB | +0.1KB |
+| Checkout | 253.3KB | 253.4KB | +0.1KB |
+
+The collection page's +3.6KB is the section renderer's import graph, not the
+toolbar, which ships nothing. The product page's +4.0KB is the gallery, the
+sticky bar and the intersection observer that drives it. Still inside the
+restated ≤30KB-of-our-own-code target.
+
+---
+
 ## Part 10 — Decisions I need from you
 
 1. **Presets:** are the four above the right bets for the merchants you are

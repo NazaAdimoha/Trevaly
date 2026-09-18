@@ -13,9 +13,16 @@ import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
 import { toMajor } from '@/lib/utils';
 
 import JsonLd from '@/components/JsonLd';
+import ProductGrid from '@/components/pages/storefront/home';
 import ProductDetailView from '@/components/pages/storefront/product-detail';
+import { SectionRenderer } from '@/components/pages/storefront/sections';
 
-import { getStorefrontProduct, resolveStorefrontTenant } from '@/app/sites/_tenant';
+import {
+  getStorefrontCatalog,
+  getStorefrontLayout,
+  getStorefrontProduct,
+  resolveStorefrontTenant,
+} from '@/app/sites/_tenant';
 
 export async function generateMetadata({
   params,
@@ -54,8 +61,20 @@ export default async function StorefrontProductPage({
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) notFound();
 
-  const product = await getStorefrontProduct(tenantSlug, slug);
+  const [product, layout] = await Promise.all([
+    getStorefrontProduct(tenantSlug, slug),
+    getStorefrontLayout(tenantSlug, tenant.theme),
+  ]);
   if (!product) notFound();
+
+  const sections = layout.pages.product.filter((section) => section.visible);
+
+  /**
+   * The catalogue is only fetched when the merchant has actually put sections
+   * on this page. A product page that shows nothing but the product should not
+   * pay for a second round trip to find that out.
+   */
+  const catalog = sections.length > 0 ? await getStorefrontCatalog(tenantSlug) : null;
 
   const url = tenantUrl(tenant, `/products/${product.slug}`);
 
@@ -128,6 +147,40 @@ export default async function StorefrontProductPage({
       <JsonLd data={productSchema} />
       <JsonLd data={breadcrumbSchema} />
       <ProductDetailView product={product} />
+
+      {/* "Pairs well with" — the rest of the collection this product sits in.
+          It arrives on the same API response as the product, so the row costs
+          markup and nothing else, and it is the cheapest way to turn a dead end
+          into a second page view. */}
+      {product.related.length > 0 ? (
+        <section
+          className='st-reveal st-hairline border-t'
+          style={{ paddingBlock: 'var(--st-section-y)' }}
+        >
+          <div className='st-container'>
+            <h2 className='st-display mb-6 text-2xl md:text-3xl'>
+              {product.category ? `More in ${product.category.name}` : 'You may also like'}
+            </h2>
+            <ProductGrid
+              products={product.related}
+              storeName={tenant.name}
+              className='grid-flow-col auto-cols-[minmax(60%,1fr)] overflow-x-auto sm:auto-cols-[minmax(32%,1fr)] lg:auto-cols-[minmax(22%,1fr)]'
+              bare
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {/* Whatever the merchant arranged beneath every product: a size guide,
+          the care instructions, the delivery promise, their reviews. */}
+      {catalog ? (
+        <SectionRenderer
+          sections={sections}
+          products={catalog.products}
+          categories={catalog.categories}
+          storeName={tenant.name}
+        />
+      ) : null}
     </>
   );
 }

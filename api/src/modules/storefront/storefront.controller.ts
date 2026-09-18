@@ -26,6 +26,7 @@ import { parseWith } from '../../common/zod.pipe';
 import { ENV, type Env } from '../../config/config.module';
 import { PrismaService } from '../../database/prisma.service';
 import { tenantDb } from '../../database/tenant-db';
+import type { Prisma } from '../../generated/prisma/client';
 import { DeliveryMethod, OrderStatus, TenantStatus } from '../../generated/prisma/enums';
 import { PaystackService } from '../../integrations/paystack.service';
 
@@ -80,9 +81,24 @@ export class StorefrontController {
    * Categories and up to 60 active products, newest first — home grid, or one
    * category's grid when `?category=` is given.
    */
+  /**
+   * Categories and products, with the sorting and filtering a collection page
+   * needs.
+   *
+   * Done in the database rather than in the browser: a store with 300 products
+   * would otherwise ship all of them to a phone so it could hide 280. `total`
+   * is the count BEFORE the page limit, because "42 products" is the number a
+   * shopper is reading while they narrow it down.
+   */
   @Get('catalog')
   @HttpCode(200)
-  async catalog(@Param('slug') slug: string, @Query('category') categorySlug?: string) {
+  async catalog(
+    @Param('slug') slug: string,
+    @Query('category') categorySlug?: string,
+    @Query('sort') sort?: string,
+    @Query('inStock') inStock?: string,
+    @Query('limit') limit?: string,
+  ) {
     const tenant = await this.storefront.publicTenant(slug);
     const db = tenantDb(this.prisma, tenant.id);
 
@@ -94,21 +110,38 @@ export class StorefrontController {
       throw new ApiException(404, 'Category not found');
     }
 
-    const [categories, products] = await Promise.all([
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+      sort === 'price-asc'
+        ? { priceKobo: 'asc' }
+        : sort === 'price-desc'
+          ? { priceKobo: 'desc' }
+          : sort === 'name'
+            ? { name: 'asc' }
+            : { createdAt: 'desc' };
+
+    const where: Prisma.ProductWhereInput = {
+      isActive: true,
+      ...(category ? { categoryId: category.id } : {}),
+      // "In stock" has to consider variants: a product whose parent stock is 0
+      // but which has a live size in stock is very much buyable.
+      ...(inStock === 'true'
+        ? { OR: [{ stock: { gt: 0 } }, { variants: { some: { isActive: true, stock: { gt: 0 } } } }] }
+        : {}),
+    };
+
+    const take = Math.min(120, Math.max(1, Number(limit) || 60));
+
+    const [categories, products, total] = await Promise.all([
       db.category.findMany({
         where: { isActive: true },
         orderBy: [{ position: 'asc' }, { name: 'asc' }],
         select: { id: true, name: true, slug: true },
       }),
-      db.product.findMany({
-        where: { isActive: true, ...(category ? { categoryId: category.id } : {}) },
-        include: { variants: true },
-        orderBy: { createdAt: 'desc' },
-        take: 60,
-      }),
+      db.product.findMany({ where, include: { variants: true }, orderBy, take }),
+      db.product.count({ where }),
     ]);
 
-    return { category, categories, products };
+    return { category, categories, products, total };
   }
 
   /**
@@ -146,16 +179,38 @@ export class StorefrontController {
     return { query, products };
   }
 
+  /**
+   * One product, plus what goes with it.
+   *
+   * `related` comes from the same collection, newest first, and falls back to
+   * the rest of the catalogue for a store that has not filed anything. Returned
+   * here rather than fetched separately because the product page would
+   * otherwise make two round trips to render one screen.
+   */
   @Get('products/:productSlug')
   @HttpCode(200)
   async product(@Param('slug') slug: string, @Param('productSlug') productSlug: string) {
     const tenant = await this.storefront.publicTenant(slug);
-    const product = await tenantDb(this.prisma, tenant.id).product.findFirst({
+    const db = tenantDb(this.prisma, tenant.id);
+
+    const product = await db.product.findFirst({
       where: { slug: productSlug, isActive: true },
-      include: { variants: true },
+      include: { variants: true, category: { select: { name: true, slug: true } } },
     });
     if (!product) throw new ApiException(404, 'Product not found');
-    return product;
+
+    const related = await db.product.findMany({
+      where: {
+        isActive: true,
+        id: { not: product.id },
+        ...(product.categoryId ? { categoryId: product.categoryId } : {}),
+      },
+      include: { variants: true },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+    });
+
+    return { ...product, related };
   }
 
   @Get('delivery-zones')

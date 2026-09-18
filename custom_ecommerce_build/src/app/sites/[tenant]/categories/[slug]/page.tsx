@@ -4,30 +4,41 @@ import { notFound } from 'next/navigation';
 import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
 
 import JsonLd from '@/components/JsonLd';
+import {
+  CollectionToolbar,
+  densityVars,
+  parseCollectionQuery,
+} from '@/components/pages/storefront/collection/toolbar';
 import ProductGrid from '@/components/pages/storefront/home';
-import CategoryNav from '@/components/pages/storefront/home/category-nav';
+import { SectionRenderer } from '@/components/pages/storefront/sections';
 
-import { getStorefrontCatalog, resolveStorefrontTenant } from '@/app/sites/_tenant';
+import {
+  getStorefrontCatalog,
+  getStorefrontLayout,
+  resolveStorefrontTenant,
+} from '@/app/sites/_tenant';
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 
-type RouteParams = { params: Promise<{ tenant: string; slug: string }> };
+type RouteParams = {
+  params: Promise<{ tenant: string; slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 /**
- * A category page — the same grid, filtered.
+ * A collection page — the same grid, filtered, sorted, and at the density the
+ * shopper asked for.
  *
  * A real route rather than a query parameter on the catalogue, for two reasons:
- * it can carry its own canonical and be indexed (a store's categories are the
+ * it can carry its own canonical and be indexed (a store's collections are the
  * broadest terms it will ever rank for), and it survives being shared in a
  * WhatsApp message, which is how most of this store's traffic arrives.
  */
-export async function generateMetadata({
-  params,
-}: RouteParams): Promise<Metadata> {
+export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
   const { tenant: tenantSlug, slug } = await params;
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) return {};
 
-  const category = (await getStorefrontCatalog(tenantSlug, slug))?.category;
+  const category = (await getStorefrontCatalog(tenantSlug, { category: slug }))?.category;
   if (!category) return {};
 
   const description = `Browse ${category.name.toLowerCase()} at ${tenant.name}. ${
@@ -38,7 +49,10 @@ export async function generateMetadata({
     title: category.name,
     description,
     // Relative to the tenant's `metadataBase`, so it resolves to the store's
-    // canonical host rather than whichever host served the request.
+    // canonical host rather than whichever host served the request. Deliberately
+    // WITHOUT the sort and filter parameters: they are the same products in a
+    // different order, and indexing each permutation splits the page's own
+    // ranking between four copies of itself.
     alternates: { canonical: STOREFRONT_ROUTES.category(category.slug) },
     openGraph: {
       type: 'website',
@@ -49,17 +63,30 @@ export async function generateMetadata({
   };
 }
 
-export default async function StorefrontCategoryPage({ params }: RouteParams) {
+export default async function StorefrontCategoryPage({ params, searchParams }: RouteParams) {
   const { tenant: tenantSlug, slug } = await params;
+  const query = parseCollectionQuery(await searchParams);
+
   const tenant = await resolveStorefrontTenant(tenantSlug);
   if (!tenant) notFound();
 
-  // The API scopes every read to this store and answers 404 for a category
-  // that does not exist or is hidden.
-  const catalog = await getStorefrontCatalog(tenantSlug, slug);
+  // The API scopes every read to this store, answers 404 for a collection that
+  // does not exist or is hidden, and does the sorting and the in-stock filter
+  // itself — see `getStorefrontCatalog` for why that cannot happen here.
+  const [catalog, layout] = await Promise.all([
+    getStorefrontCatalog(tenantSlug, {
+      category: slug,
+      sort: query.sort,
+      inStock: query.inStock,
+    }),
+    getStorefrontLayout(tenantSlug, tenant.theme),
+  ]);
   const category = catalog?.category;
   if (!catalog || !category) notFound();
-  const { categories, products } = catalog;
+  const { categories, products, total } = catalog;
+
+  const sections = layout.pages.collection.filter((section) => section.visible);
+  const base = STOREFRONT_ROUTES.category(category.slug);
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -75,7 +102,7 @@ export default async function StorefrontCategoryPage({ params }: RouteParams) {
         '@type': 'ListItem',
         position: 2,
         name: category.name,
-        item: tenantUrl(tenant, STOREFRONT_ROUTES.category(category.slug)),
+        item: tenantUrl(tenant, base),
       },
     ],
   };
@@ -83,15 +110,44 @@ export default async function StorefrontCategoryPage({ params }: RouteParams) {
   return (
     <>
       <JsonLd data={breadcrumbSchema} />
-      <CategoryNav categories={categories} activeSlug={category.slug} />
-      <h1 className='mx-auto max-w-6xl px-4 pt-6 text-xl font-semibold'>
-        {category.name}
-      </h1>
-      <ProductGrid
-        products={products}
-        storeName={tenant.name}
-        emptyMessage={`No ${category.name.toLowerCase()} in stock right now.`}
+
+      <header className='st-container' style={{ paddingTop: 'var(--st-section-y)' }}>
+        <h1 className='st-display text-3xl md:text-4xl'>{category.name}</h1>
+      </header>
+
+      <CollectionToolbar
+        base={base}
+        query={query}
+        total={total}
+        siblings={categories}
+        activeSlug={category.slug}
       />
+
+      {/* Density is three custom properties on this wrapper — the grid already
+          reads its column counts from tokens, so a shopper changing how much
+          they see costs no new CSS and no JavaScript. */}
+      <div style={densityVars(query.density)}>
+        <ProductGrid
+          products={products}
+          storeName={tenant.name}
+          emptyMessage={
+            query.inStock
+              ? `Everything in ${category.name.toLowerCase()} is sold out right now. Turn off "in stock only" to see it all.`
+              : `No ${category.name.toLowerCase()} in stock right now.`
+          }
+        />
+      </div>
+
+      {/* Whatever the merchant put beneath every collection: the sizing note,
+          the delivery promise, the story behind the range. */}
+      {sections.length > 0 ? (
+        <SectionRenderer
+          sections={sections}
+          products={products}
+          categories={categories}
+          storeName={tenant.name}
+        />
+      ) : null}
     </>
   );
 }

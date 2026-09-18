@@ -392,6 +392,18 @@
     }
   }
 
+  /* Every `<summary>` in the storefront is a styled control — an accordion
+     row, a sort menu. Tailwind's `list-none` hides the marker everywhere
+     except Safari, which needs this pseudo-element; without it the storefront
+     grows a stray triangle on iOS only, which is most of its traffic. */
+  .st-root summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .st-sort[open] > summary > svg:last-child {
+    transform: rotate(180deg);
+  }
+
   .st-card {
     display: flex;
     flex-direction: column;

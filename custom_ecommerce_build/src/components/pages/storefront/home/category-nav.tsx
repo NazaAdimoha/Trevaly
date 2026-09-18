@@ -1,7 +1,5 @@
 import Link from 'next/link';
 
-import { cn } from '@/lib/cn';
-
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 
 export type CategoryNavItem = { id: string; name: string; slug: string };
@@ -29,7 +27,7 @@ export default function CategoryNav({
   return (
     <nav
       aria-label='Product categories'
-      className='mx-auto max-w-6xl px-4 pt-6'
+      className='st-container pt-6'
     >
       {/* Scrolls rather than wraps: a phone showing eight categories should not
           push the first product off the screen. */}
@@ -67,15 +65,14 @@ function Chip({
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      className={cn(
-        'st-control inline-flex min-h-9 items-center border px-4 text-sm whitespace-nowrap transition-colors',
-        active
-          ? 'border-transparent text-white'
-          : 'border-gray-200 text-gray-700 hover:border-gray-900',
-      )}
-      // The tenant colour, used the way every theme uses it: as an accent on
-      // one small element, never as a large surface.
-      style={active ? { backgroundColor: 'var(--brand)' } : undefined}
+      className='st-control inline-flex min-h-9 items-center px-4 text-sm whitespace-nowrap transition-colors hover:opacity-70'
+      // The store's own ink and ground rather than a hardcoded grey — the same
+      // pill as the collection toolbar's, so a shopper moving between the home
+      // page and a collection sees one control, not two that nearly match.
+      style={{
+        border: '1px solid var(--st-line)',
+        ...(active ? { background: 'var(--st-ink)', color: 'var(--st-bg)' } : {}),
+      }}
     >
       {children}
     </Link>

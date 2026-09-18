@@ -51,10 +51,33 @@ export type StorefrontProduct = {
   }>;
 };
 
+/**
+ * One product plus what the detail page needs around it: the collection it
+ * belongs to (for breadcrumbs) and what else is in that collection.
+ *
+ * `related` comes back from the same API call rather than a second one — a
+ * "pairs well with" row that costs an extra round trip is a row that gets cut
+ * the first time the page feels slow.
+ */
+export type StorefrontProductDetail = StorefrontProduct & {
+  category: { name: string; slug: string } | null;
+  related: StorefrontProduct[];
+};
+
 export type StorefrontCatalog = {
   category: { id: string; name: string; slug: string } | null;
   categories: Array<{ id: string; name: string; slug: string }>;
   products: StorefrontProduct[];
+  /** Matches before the limit, so a collection page can say "48 items". */
+  total: number;
+};
+
+/** How a collection page is currently narrowed and ordered. */
+export type CatalogQuery = {
+  category?: string;
+  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name';
+  inStock?: boolean;
+  limit?: number;
 };
 
 const path = (slug: string, rest = '') => `/storefront/${encodeURIComponent(slug)}${rest}`;
@@ -74,15 +97,36 @@ export const resolveStorefrontTenant = cache((slug: string) =>
   apiGetOrNull<StorefrontTenant>(path(slug)),
 );
 
-/** Categories plus up to 60 active products; one category's when given. */
-export const getStorefrontCatalog = cache((slug: string, categorySlug?: string) =>
-  apiGetOrNull<StorefrontCatalog>(
-    path(slug, categorySlug ? `/catalog?category=${encodeURIComponent(categorySlug)}` : '/catalog'),
-  ),
+/**
+ * Categories plus the store's active products, narrowed and ordered by the API.
+ *
+ * Sorting and the in-stock filter are the API's job, not the page's: filtering
+ * a 60-product slice in the browser would quietly drop the 61st match, and
+ * "price, low to high" over a partial page is simply the wrong answer.
+ *
+ * The query is serialised in a FIXED order so React's `cache` sees one key per
+ * distinct query — `?sort=name&category=bags` and `?category=bags&sort=name`
+ * would otherwise be two cache entries and two calls for one page.
+ */
+function catalogPath(slug: string, query: CatalogQuery): string {
+  const params = new URLSearchParams();
+  if (query.category) params.set('category', query.category);
+  if (query.sort && query.sort !== 'newest') params.set('sort', query.sort);
+  if (query.inStock) params.set('inStock', 'true');
+  if (query.limit) params.set('limit', String(query.limit));
+  const search = params.toString();
+  return path(slug, search ? `/catalog?${search}` : '/catalog');
+}
+
+export const getStorefrontCatalog = cache(
+  (slug: string, query: CatalogQuery = {}) =>
+    apiGetOrNull<StorefrontCatalog>(catalogPath(slug, query)),
 );
 
 export const getStorefrontProduct = cache((slug: string, productSlug: string) =>
-  apiGetOrNull<StorefrontProduct>(path(slug, `/products/${encodeURIComponent(productSlug)}`)),
+  apiGetOrNull<StorefrontProductDetail>(
+    path(slug, `/products/${encodeURIComponent(productSlug)}`),
+  ),
 );
 
 /**
