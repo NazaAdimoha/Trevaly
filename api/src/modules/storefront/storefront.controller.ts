@@ -43,6 +43,12 @@ import { StorefrontService } from './storefront.service';
  * The reads replace the Server Components' direct Prisma queries, field for
  * field, so pages render what they rendered before.
  */
+/** The greeting name: first word, first letter up, nothing else changed. */
+function firstNameOf(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] ?? '';
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : '';
+}
+
 @Controller('storefront/:slug')
 export class StorefrontController {
   constructor(
@@ -226,10 +232,25 @@ export class StorefrontController {
   }
 
   /**
-   * Order confirmation. The reference is the credential (a customer who just
-   * paid has no account), so the page gets only what it shows — and the email
-   * leaves this API already masked, so security audit finding 6 cannot regress
-   * over the wire. Scoped: another store's reference does not resolve here.
+   * Order confirmation — the receipt, not just the fact of one.
+   *
+   * The reference IS the credential: a customer who has just paid has no
+   * account, and the redirect back from Paystack is all they hold. That makes
+   * this endpoint's field list a security decision, so it is drawn explicitly:
+   *
+   *  - IN: what the customer themselves just typed or chose, and can already
+   *    see on their bank statement — the lines they bought, what each cost, the
+   *    delivery zone and fee, the totals.
+   *  - OUT: the full email (masked here, so security audit finding 6 cannot
+   *    regress over the wire), the phone number, and the street address. The
+   *    address is the one judgement call: a confirmation page showing it back
+   *    answers "did I type it right", but a link forwarded in a WhatsApp group
+   *    would then carry someone's home address. The zone name is enough to
+   *    confirm the right choice was made, and costs nothing if the link leaks.
+   *  - The first name only, for the greeting — warm, and not an identifier.
+   *
+   * Scoped: another store's reference does not resolve here, even though
+   * `paymentReference` is globally unique.
    */
   @Get('orders/:reference')
   @HttpCode(200)
@@ -240,15 +261,51 @@ export class StorefrontController {
       select: {
         orderNumber: true,
         status: true,
-        totalKobo: true,
+        createdAt: true,
+        customerName: true,
         customerEmail: true,
+        deliveryMethod: true,
+        deliveryFeeKobo: true,
+        deliveryZone: { select: { name: true } },
+        subtotalKobo: true,
+        discountKobo: true,
+        totalKobo: true,
         paidAfterCancellation: true,
+        items: {
+          select: {
+            id: true,
+            productName: true,
+            variantLabel: true,
+            quantity: true,
+            unitPriceKobo: true,
+            // The snapshot on the item is what the receipt says; the product is
+            // joined only for the picture and the link back, both of which are
+            // allowed to have moved on since. A deleted image leaves the line
+            // intact, which is why the name and price are never read from here.
+            product: { select: { slug: true, imageUrls: true } },
+          },
+        },
       },
     });
     if (!order) throw new ApiException(404, 'Order not found');
 
-    const { customerEmail, ...rest } = order;
-    return { ...rest, maskedEmail: maskEmail(customerEmail) };
+    const { customerEmail, customerName, deliveryZone, items, ...rest } = order;
+
+    return {
+      ...rest,
+      maskedEmail: maskEmail(customerEmail),
+      // Capitalised, because people type their name into a checkout field in
+      // whatever case their keyboard was in, and "Thank you, naz" reads as a
+      // database record talking rather than a shop. Only the first letter is
+      // touched, so "NAZ" and "d'Angelo" survive.
+      firstName: firstNameOf(customerName),
+      deliveryZoneName: deliveryZone?.name ?? null,
+      items: items.map(({ product, ...item }) => ({
+        ...item,
+        productSlug: product.slug,
+        imageUrl: product.imageUrls[0] ?? null,
+      })),
+    };
   }
 
   /** Data for `sitemap.xml`; the web route builds the XML from canonical URLs. */

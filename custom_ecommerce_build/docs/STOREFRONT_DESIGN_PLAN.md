@@ -526,6 +526,85 @@ restated ≤30KB-of-our-own-code target.
 
 ---
 
+## What shipped — the order confirmation page
+
+The last page of the session, and the one that looked least like the shop: a
+grey tick, an order number, a total, and a link. Everything on it was hardcoded
+`text-gray-600` rather than the store's tokens, so a shopper who had just sent
+money landed on a page that looked nothing like the shop they sent it to.
+
+### The API had to change first
+
+A confirmation page cannot be made good with only a number and a total, so
+`/storefront/:slug/orders/:reference` now returns the receipt: the lines bought
+with their snapshots, the subtotal, discount, delivery zone and fee, the date,
+and the first name.
+
+**The reference in the URL IS the credential** — a customer who has just paid
+has no account — so the field list is a security decision and is drawn
+explicitly in the endpoint's own comment:
+
+- **In:** what the customer themselves just typed or chose, and can already see
+  on their bank statement.
+- **Out:** the full email (masked, so the earlier audit finding cannot regress
+  over the wire), the phone number, and the street address. The address was the
+  judgement call — showing it back answers "did I type it right", but a link
+  forwarded into a WhatsApp group would then carry someone's home address. The
+  zone name confirms the right choice was made and costs nothing if the link
+  leaks.
+- The **first name only**, capitalised, for the greeting.
+
+`test/storefront-order.test.ts` pins that list, and its most important
+assertions are the negative ones: adding a field to a Prisma `select` is a
+one-line change that silently starts shipping a phone number to anyone holding
+a forwarded link, and nothing else in the system would notice.
+
+### What the page shows now
+
+A mark that **draws itself**, a confetti burst, the total **counting up**, then:
+order number and date, a "what happens next" timeline, the lines with
+thumbnails and their arithmetic (`₦18,000.00 × 3`, not just `Qty 3`), the
+totals, where it is going, and two exits — a human, and the shop.
+
+The timeline says only that payment is confirmed and names the steps that
+follow; it does not imply live tracking we do not have. It is there because "I
+have paid, now what?" was completely unanswered, and an unanswered question at
+that moment becomes a WhatsApp message the merchant answers by hand.
+
+The contact button prefers WhatsApp — it opens with the order number already
+typed — and falls back to email. A store with neither gets no button rather
+than a dead one. All three of the non-confirmed states (verifying, pending,
+paid-after-cancellation) were dead ends with no way out; they now carry the
+same two actions.
+
+### A token the system was missing
+
+Presets had `sale` (red) and no success colour, so a confirmation had nothing
+correct to be. `--st-success` is now a real token with a value per preset —
+lighter on Obsidian's dark ground, muted on Atelier's warm neutrals — plus a
+derived `--st-success-wash`. Without it, a shop whose accent is red or orange
+would render its one unambiguously good moment in the colour everything else
+uses for danger, and **a shopper reads the colour before the words**.
+
+### On the motion
+
+Everything animated is transform, opacity or `stroke-dashoffset` — nothing that
+triggers layout, so it runs at frame rate on the mid-range Android most of
+these shoppers are holding. Every keyframe lives inside
+`@media (prefers-reduced-motion: no-preference)`, and the **finished state is
+the default state**: the dash offsets exist only inside the keyframes, so a
+viewer who asked for less motion gets a drawn ring and a solid tick rather than
+an invisible one. The confetti is eighteen spans that unmount after 2.6s, not a
+canvas and not a library.
+
+The count-up is the one piece that checks `prefers-reduced-motion` in
+JavaScript rather than CSS, because there the animation *is* the value and
+there are no keyframes to leave out. It initialises to the real figure — which
+is what the server renders and what a viewer with JavaScript off keeps — so the
+HTML can never contain ₦0.00 for a paid order.
+
+---
+
 ## Part 10 — Decisions I need from you
 
 1. **Presets:** are the four above the right bets for the merchants you are

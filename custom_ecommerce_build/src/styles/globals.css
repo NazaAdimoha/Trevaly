@@ -579,6 +579,106 @@
     .st-card:hover .st-media img {
       transform: scale(1.04);
     }
+
+    /* ── The confirmation mark ────────────────────────────────────────────
+       The one moment in the whole storefront that earns real animation: the
+       payment has landed and the page should feel like it. The ring and the
+       tick DRAW rather than appear, which reads as "this just happened"
+       instead of "this was always here".
+
+       Every property animated below is transform, opacity or stroke-dashoffset
+       — none of them trigger layout, so this runs at frame rate on the
+       mid-range Android most of these shoppers are holding.
+
+       The finished state is the DEFAULT state: the dash offsets live only
+       inside the keyframes, so a viewer who has asked for less motion (this
+       whole block never applies to them) gets a drawn ring and a solid tick,
+       not an invisible one. */
+    @keyframes st-draw {
+      from {
+        stroke-dashoffset: var(--st-draw-length, 300);
+      }
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @keyframes st-mark-pop {
+      0% {
+        transform: scale(0.82);
+      }
+      60% {
+        transform: scale(1.06);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* A single ring expanding out of the mark — one ripple, not a pulse loop.
+       A confirmation that keeps pulsing reads as "still working". */
+    @keyframes st-halo {
+      from {
+        opacity: 0.5;
+        transform: scale(0.6);
+      }
+      to {
+        opacity: 0;
+        transform: scale(1.9);
+      }
+    }
+
+    .st-mark {
+      animation: st-mark-pop 620ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    }
+
+    .st-mark-ring {
+      --st-draw-length: 289; /* 2πr, r = 46 */
+      stroke-dasharray: 289;
+      animation: st-draw 700ms var(--st-ease, ease) both;
+    }
+
+    .st-mark-tick {
+      --st-draw-length: 48;
+      stroke-dasharray: 48;
+      animation: st-draw 320ms var(--st-ease, ease) 520ms both;
+    }
+
+    .st-halo {
+      animation: st-halo 1100ms var(--st-ease, ease) 240ms both;
+    }
+
+    /* Confetti. Purely decorative, `aria-hidden`, and gone in 2.4s — each piece
+       is one span the page already had to lay out, given a start angle and a
+       fall through custom properties. No canvas, no library. */
+    @keyframes st-confetti {
+      0% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(0.4);
+      }
+      /* Up first, then down. A burst that only falls reads as something
+         dropping; the brief rise is what makes it read as a pop. */
+      18% {
+        opacity: 1;
+        transform: translate3d(calc(var(--st-cx, 0px) * 0.28), -70px, 0)
+          rotate(calc(var(--st-cr, 360deg) * 0.18)) scale(1);
+      }
+      /* Held opaque until most of the travel is done — fading from the first
+         frame leaves the pieces invisible before they have gone anywhere. */
+      72% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--st-cx, 0px), var(--st-cy, 120px), 0)
+          rotate(var(--st-cr, 360deg)) scale(1);
+      }
+    }
+
+    .st-confetti span {
+      animation: st-confetti var(--st-cd, 1800ms) cubic-bezier(0.25, 0.5, 0.4, 1)
+        var(--st-cdelay, 0ms) both;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {

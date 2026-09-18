@@ -41,7 +41,17 @@ export type StorefrontTokens = {
     line: string;
     /** The one colour a merchant may replace. */
     accent: string;
+    /** Urgency: a markdown, a last-one-left, a countdown running out. */
     sale: string;
+    /**
+     * Confirmation: the payment landed, the order is placed.
+     *
+     * Separate from `accent` on purpose. A shop whose accent is red or orange
+     * would otherwise render its one unambiguously good moment in the colour
+     * everything else uses for danger — and a shopper reads the colour before
+     * the words. Green here is not decoration, it is the message.
+     */
+    success: string;
   };
   type: {
     display: FontKey;
@@ -101,6 +111,7 @@ export const PRESETS: Record<PresetKey, PresetDefinition> = {
         line: "#E3E5DE",
         accent: "#C6F24E",
         sale: "#D93A2B",
+        success: "#1F8A4C",
       },
       type: {
         display: "utility",
@@ -136,6 +147,7 @@ export const PRESETS: Record<PresetKey, PresetDefinition> = {
         line: "#26262A",
         accent: "#F6F6F5",
         sale: "#E0483A",
+        success: "#3FBF7F",
       },
       type: {
         display: "utility",
@@ -171,6 +183,7 @@ export const PRESETS: Record<PresetKey, PresetDefinition> = {
         line: "#F0E3D3",
         accent: "#6D4AFF",
         sale: "#F4623A",
+        success: "#12A150",
       },
       type: {
         display: "rounded",
@@ -206,6 +219,7 @@ export const PRESETS: Record<PresetKey, PresetDefinition> = {
         line: "#E2DCD1",
         accent: "#2F4434",
         sale: "#9C3B2E",
+        success: "#4A7A52",
       },
       type: {
         display: "serif",
@@ -331,6 +345,10 @@ export function tokensToCssVars(
     "--st-accent-hover": darken(color.accent, onDark ? -0.1 : 0.12),
     "--st-accent-wash": alpha(color.accent, 0.12),
     "--st-sale": color.sale,
+    "--st-success": color.success,
+    // The soft ring behind a confirmation mark, and any success surface. Derived
+    // rather than authored so it can never drift from the colour it tints.
+    "--st-success-wash": alpha(color.success, 0.12),
 
     // ── Type ──────────────────────────────────────────────────────────────
     "--st-font-display": `var(--font-st-${type.display})`,
