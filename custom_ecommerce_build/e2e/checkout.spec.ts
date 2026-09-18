@@ -29,10 +29,28 @@ const nairaLabel = (kobo: number) =>
 /** Paystack separates its amount with U+00A0, which no plain equality survives. */
 const normalizeSpaces = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-/** Radix Select is not a native `<select>`, so `selectOption` does not apply. */
+/**
+ * The delivery picker is a NATIVE `<select>` now, not the Radix one.
+ *
+ * That is deliberate: on a phone a native select is the OS picker — big
+ * targets, familiar gestures, usable one-handed — which no custom dropdown on
+ * a checkout page beats. It also means `selectOption` applies again, so this
+ * helper no longer has to click a listbox open.
+ */
 async function chooseFromSelect(page: Page, label: string, option: RegExp) {
-  await page.locator('main').getByRole('combobox', { name: label }).first().click();
-  await page.getByRole('option', { name: option }).first().click();
+  const select = page.locator('main').getByLabel(label, { exact: true });
+  await select.selectOption({ label: await optionLabel(select, option) });
+}
+
+/** The full option text matching `pattern`, since `selectOption` wants exact. */
+async function optionLabel(
+  select: ReturnType<Page['locator']>,
+  pattern: RegExp,
+): Promise<string> {
+  const labels = await select.locator('option').allTextContents();
+  const found = labels.find((text) => pattern.test(text));
+  if (!found) throw new Error(`No option matching ${pattern} in ${labels.join(' | ')}`);
+  return found;
 }
 
 /**
@@ -47,7 +65,8 @@ async function fillCheckoutForm(page: Page) {
   await form.getByLabel('Full name').fill('E2E Buyer');
   await form.getByLabel('Email').fill('e2e-buyer@example.com');
   await form.getByLabel(/phone/i).fill('08031234567');
-  await chooseFromSelect(page, 'Delivery zone', /Lagos Mainland/);
+  // "Delivery area", not "zone" — a zone is our word for it, not a shopper's.
+  await chooseFromSelect(page, 'Delivery area', /Lagos Mainland/);
   await form.getByLabel(/delivery address/i).fill('12 Test Close, Yaba, Lagos');
 }
 

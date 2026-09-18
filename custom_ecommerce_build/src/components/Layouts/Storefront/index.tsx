@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect } from 'react';
 
 import type { StorefrontLayout } from '@core/storefront/layout';
@@ -13,7 +14,7 @@ import { AnnouncementBar } from './announcement-bar';
 import { CartDrawer } from './cart-drawer';
 import { StorefrontFooter } from './footer';
 import { type NavItem,StorefrontHeader } from './header';
-import { MobileBar } from './mobile-bar';
+import { hidesMobileBar,MobileBar } from './mobile-bar';
 import { MobileMenu } from './mobile-menu';
 import { SearchOverlay } from './search-overlay';
 
@@ -44,6 +45,7 @@ export default function StorefrontShell({
 }) {
   const tenant = useTenant();
   const setTenant = useCart((s) => s.setTenant);
+  const pathname = usePathname();
 
   // Scope the persisted cart to this store, so two storefronts open in the same
   // browser cannot contaminate each other.
@@ -68,8 +70,12 @@ export default function StorefrontShell({
 
       <StorefrontFooter footer={chrome.footer} />
 
-      {/* Room for the bottom bar, so a footer link is never underneath it. */}
-      {chrome.mobileBar.enabled ? <div className='h-14 lg:hidden' aria-hidden /> : null}
+      {/* Room for the bottom bar, so a footer link is never underneath it. The
+          spacer has to follow the bar's own visibility or checkout gains 56px
+          of dead space at the end of the page. */}
+      {chrome.mobileBar.enabled && !hidesMobileBar(pathname) ? (
+        <div className='h-14 lg:hidden' aria-hidden />
+      ) : null}
 
       <MobileBar bar={chrome.mobileBar} />
       <CartDrawer

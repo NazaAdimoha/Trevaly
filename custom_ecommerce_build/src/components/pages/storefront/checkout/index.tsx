@@ -1,7 +1,7 @@
 'use client';
 
-import { isAxiosError } from 'axios';
-import { Form, Formik, type FormikHelpers, useFormikContext } from 'formik';
+import { Form, Formik, type FormikHelpers } from 'formik';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -12,232 +12,63 @@ import { formatCurrency } from '@core/money';
 import { api, extractErrorMessage } from '@/lib/api';
 import { resumePaystackTransaction } from '@/lib/payments/paystack-popup';
 import { useCart } from '@/lib/store/cart';
-
-import { InputField } from '@/components/fields/InputField';
-import { SelectField } from '@/components/fields/SelectField';
-import { TextAreaField } from '@/components/fields/TextAreaField';
+import { useTenant } from '@/lib/tenant-context';
 
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 
+import { AreaField, ChoiceField, PickField, TextField } from './fields';
+import {
+  type AppliedCoupon,
+  OrderSummary,
+  TrustRow,
+  type Zone,
+} from './summary';
 import {
   checkoutInitialValues,
   checkoutValidationSchema,
   type ICheckoutFormValues,
 } from './types';
 
-type Zone = { id: string; name: string; feeKobo: number };
-
-/** A coupon the server has quoted for this cart. Indicative, like the summary. */
-type AppliedCoupon = { code: string; discountKobo: number };
-
-const normalizeCode = (code: string) => code.trim().toUpperCase();
-
 /**
- * The quote only counts while the field still holds the code it was issued
- * for. Derived rather than cleared in an effect: editing the field is enough to
- * withdraw the discount, with no moment where a stale one is still displayed.
+ * Checkout.
+ *
+ * The page where a shopper who has already decided still walks away, and — until
+ * this pass — the only one in the storefront that used none of the store's
+ * design tokens. A shopper went from a shop with the merchant's typeface,
+ * colour and shapes to a grey form, and then back to a designed confirmation.
+ * The one step handling their money looked the least like it belonged.
+ *
+ * Three things changed beyond the paint:
+ *
+ *  - the summary shows the ITEMS, not four numbers, and on a phone it collapses
+ *    above the form so the total is visible before any typing;
+ *  - the delivery choice is two cards rather than a dropdown, because it
+ *    changes both the rest of the form and the total;
+ *  - every field carries `autoComplete`, which is what lets a phone fill the
+ *    whole contact block in one tap.
  */
-function activeCoupon(
-  applied: AppliedCoupon | null,
-  fieldValue: string,
-): AppliedCoupon | null {
-  return applied && applied.code === normalizeCode(fieldValue) ? applied : null;
-}
-
-const DELIVERY_OPTIONS = [
-  { label: 'Deliver to my address', value: DeliveryMethod.ZONE_DELIVERY },
-  { label: 'Pick up in store (free)', value: DeliveryMethod.PICKUP },
-];
-
-/** Live order summary. Indicative only — the server re-prices everything. */
-function OrderSummary({
+export default function CheckoutView({
   zones,
-  applied,
+  storeAddress,
 }: {
   zones: Zone[];
-  applied: AppliedCoupon | null;
+  /**
+   * Passed from the server page rather than read from `useTenant()`. The
+   * storefront's client tenant context deliberately carries branding only —
+   * this is already public (it is in the store's structured data), but the
+   * context is kept minimal on purpose and one checkout string is not a reason
+   * to widen it for every page.
+   */
+  storeAddress: string | null;
 }) {
-  const { values } = useFormikContext<ICheckoutFormValues>();
-  const coupon = activeCoupon(applied, values.couponCode);
-  const discountKobo = coupon?.discountKobo ?? 0;
-  const items = useCart((s) => s.items);
-
-  const subtotalKobo = items.reduce(
-    (total, item) => total + item.unitPriceKobo * item.quantity,
-    0,
-  );
-
-  const zone =
-    values.deliveryMethod === DeliveryMethod.ZONE_DELIVERY
-      ? zones.find((z) => z.id === values.deliveryZoneId)
-      : undefined;
-  const deliveryFeeKobo = zone?.feeKobo ?? 0;
-
-  return (
-    <div className='rounded-lg border p-4 text-sm'>
-      <p className='font-medium'>Order summary</p>
-      <dl className='mt-3 space-y-2'>
-        <div className='flex justify-between'>
-          <dt className='text-gray-600'>Subtotal</dt>
-          <dd>{formatCurrency(subtotalKobo)}</dd>
-        </div>
-        <div className='flex justify-between'>
-          <dt className='text-gray-600'>Delivery</dt>
-          <dd>
-            {values.deliveryMethod === DeliveryMethod.PICKUP
-              ? 'Free'
-              : zone
-                ? formatCurrency(deliveryFeeKobo)
-                : '—'}
-          </dd>
-        </div>
-        {coupon ? (
-          <div className='flex justify-between text-green-700'>
-            <dt>Discount ({coupon.code})</dt>
-            <dd>−{formatCurrency(discountKobo)}</dd>
-          </div>
-        ) : null}
-        <div className='flex justify-between border-t pt-2 font-medium'>
-          <dt>Total</dt>
-          <dd>
-            {formatCurrency(
-              Math.max(0, subtotalKobo - discountKobo) + deliveryFeeKobo,
-            )}
-          </dd>
-        </div>
-      </dl>
-      {values.couponCode && !coupon ? (
-        <p className='mt-3 text-xs text-gray-500'>
-          Apply your code to see the discount before you pay.
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * Coupon entry with a real quote.
- *
- * `/api/coupons/preview` existed from the start but nothing called it, so a
- * shopper found out what their code was worth only after the Paystack overlay
- * had opened — the worst moment to be surprised by a total. This is its caller.
- *
- * Still indicative: `/api/checkout` recomputes the discount from the database
- * and ignores anything decided here. A shopper who never presses Apply is
- * checked there instead, with the same uniform message.
- */
-function CouponField({
-  subtotalKobo,
-  applied,
-  onApplied,
-}: {
-  subtotalKobo: number;
-  applied: AppliedCoupon | null;
-  onApplied: (coupon: AppliedCoupon | null) => void;
-}) {
-  const { values } = useFormikContext<ICheckoutFormValues>();
-  const [checking, setChecking] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const code = normalizeCode(values.couponCode);
-  const current = activeCoupon(applied, values.couponCode);
-
-  const apply = async () => {
-    if (!code || checking) return;
-    setChecking(true);
-    setMessage(null);
-    try {
-      const { data } = await api.post<
-        | { valid: true; code: string; discountKobo: number }
-        | { valid: false; error: string }
-      >('/coupons/preview', { code, subtotalKobo });
-
-      if (data.valid) {
-        onApplied({ code: data.code, discountKobo: data.discountKobo });
-      } else {
-        onApplied(null);
-        // The server's wording, verbatim — it is deliberately the same for
-        // every kind of failure, and paraphrasing it here could undo that.
-        setMessage(data.error);
-      }
-    } catch (err) {
-      onApplied(null);
-      setMessage(
-        isAxiosError(err) && err.response?.status === 429
-          ? 'Too many attempts. Please wait a moment and try again.'
-          : 'We could not check that code just now. It will still be checked when you pay.',
-      );
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  return (
-    <div>
-      <InputField
-        name='couponCode'
-        label='Coupon code'
-        placeholder='Optional'
-        autoCapitalize='characters'
-        onKeyDown={(e) => {
-          // Enter applies the code rather than submitting the whole checkout
-          // and opening a payment the shopper did not ask for yet.
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            void apply();
-          }
-        }}
-      />
-      <div className='mt-2 flex flex-wrap items-center gap-3'>
-        <button
-          type='button'
-          onClick={() => void apply()}
-          disabled={!code || checking || current !== null}
-          className='rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50'
-        >
-          {checking ? 'Checking…' : current ? 'Applied' : 'Apply'}
-        </button>
-        {current ? (
-          <span className='text-sm text-green-700' role='status'>
-            {formatCurrency(current.discountKobo)} off
-          </span>
-        ) : message ? (
-          <span className='text-sm text-red-700' role='alert'>
-            {message}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-export default function CheckoutView({ zones }: { zones: Zone[] }) {
   const items = useCart((s) => s.items);
   const clearCart = useCart((s) => s.clear);
+  const tenant = useTenant();
   const router = useRouter();
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
-    null,
-  );
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
-  const subtotalKobo = items.reduce(
-    (total, item) => total + item.unitPriceKobo * item.quantity,
-    0,
-  );
-
-  if (items.length === 0) {
-    return (
-      <div className='mx-auto max-w-2xl px-4 py-24 text-center'>
-        <h1 className='text-xl font-semibold'>Your cart is empty</h1>
-        <Link
-          href={STOREFRONT_ROUTES.home}
-          className='mt-4 inline-block text-sm underline'
-        >
-          Continue shopping
-        </Link>
-      </div>
-    );
-  }
+  if (items.length === 0) return <EmptyCart />;
 
   const handleSubmit = async (
     values: ICheckoutFormValues,
@@ -287,8 +118,7 @@ export default function CheckoutView({ zones }: { zones: Zone[] }) {
         onCancel: () => setSubmitting(false),
         onError: (error) => {
           setPaymentError(
-            error?.message ??
-              'Payment could not be completed. Please try again.',
+            error?.message ?? 'Payment could not be completed. Please try again.',
           );
           setSubmitting(false);
         },
@@ -303,96 +133,208 @@ export default function CheckoutView({ zones }: { zones: Zone[] }) {
   };
 
   return (
-    <div className='mx-auto max-w-3xl px-4 py-10'>
-      <h1 className='text-2xl font-semibold'>Checkout</h1>
+    <Formik
+      initialValues={checkoutInitialValues}
+      validationSchema={checkoutValidationSchema}
+      onSubmit={handleSubmit}
+    >
+      {({ isSubmitting, values }) => (
+        <Form>
+          {/* Phone: the summary sits above everything, collapsed. */}
+          <OrderSummary
+            zones={zones}
+            applied={appliedCoupon}
+            onApplied={setAppliedCoupon}
+            collapsible
+          />
 
-      <Formik
-        initialValues={checkoutInitialValues}
-        validationSchema={checkoutValidationSchema}
-        onSubmit={handleSubmit}
-      >
-        {({ isSubmitting, values }) => (
-          <Form className='mt-6 grid gap-8 md:grid-cols-[1fr_320px]'>
-            <div className='space-y-5'>
-              <InputField name='customerName' label='Full name' required />
-              <InputField
-                name='customerEmail'
-                label='Email'
-                type='email'
-                required
-                subtitle='Your receipt and order updates go here.'
-              />
-              <InputField
-                name='customerPhone'
-                label='Phone number'
-                required
-                placeholder='08031234567'
-              />
+          <div
+            className='st-container max-w-5xl'
+            style={{ paddingBlock: 'var(--st-section-y)' }}
+          >
+            <Link
+              href={STOREFRONT_ROUTES.cart}
+              className='st-muted mb-6 inline-flex items-center gap-2 text-xs hover:opacity-70'
+            >
+              <ArrowLeft className='size-3.5' aria-hidden />
+              Back to cart
+            </Link>
 
-              <SelectField
-                name='deliveryMethod'
-                label='Delivery'
-                required
-                options={DELIVERY_OPTIONS}
-              />
+            <h1 className='st-display text-3xl md:text-4xl'>Checkout</h1>
 
-              {values.deliveryMethod === DeliveryMethod.ZONE_DELIVERY ? (
-                <>
-                  <SelectField
-                    name='deliveryZoneId'
-                    label='Delivery zone'
-                    required
-                    placeholder='Select your area'
-                    options={zones.map((zone) => ({
-                      label: `${zone.name} — ${formatCurrency(zone.feeKobo)}`,
-                      value: zone.id,
-                    }))}
+            <div className='mt-8 grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14'>
+              <div className='space-y-10'>
+                <Section index={1} title='Your details'>
+                  <TextField
+                    name='customerName'
+                    label='Full name'
+                    autoComplete='name'
+                    placeholder='Chidi Okonkwo'
                   />
-                  <TextAreaField
-                    name='deliveryAddress'
-                    label='Delivery address'
-                    rows={3}
-                    required
+                  <TextField
+                    name='customerEmail'
+                    label='Email'
+                    type='email'
+                    inputMode='email'
+                    autoComplete='email'
+                    placeholder='you@example.com'
+                    hint='Your receipt and order updates go here.'
                   />
-                </>
-              ) : null}
+                  <TextField
+                    name='customerPhone'
+                    label='Phone number'
+                    type='tel'
+                    inputMode='tel'
+                    autoComplete='tel'
+                    placeholder='08031234567'
+                    hint={`How ${tenant.name} reaches you about this delivery.`}
+                  />
+                </Section>
 
-              <CouponField
-                subtotalKobo={subtotalKobo}
-                applied={appliedCoupon}
-                onApplied={setAppliedCoupon}
-              />
+                <Section index={2} title='Delivery'>
+                  <ChoiceField
+                    name='deliveryMethod'
+                    label='How would you like to get it?'
+                    options={[
+                      {
+                        label: 'Deliver to my address',
+                        value: DeliveryMethod.ZONE_DELIVERY,
+                        note: 'Fee depends on your area',
+                      },
+                      {
+                        label: 'Pick up in store',
+                        value: DeliveryMethod.PICKUP,
+                        note: 'Free',
+                      },
+                    ]}
+                  />
+
+                  {values.deliveryMethod === DeliveryMethod.ZONE_DELIVERY ? (
+                    <>
+                      <PickField
+                        name='deliveryZoneId'
+                        label='Delivery area'
+                        placeholder='Select your area'
+                        options={zones.map((zone) => ({
+                          label: `${zone.name} — ${formatCurrency(zone.feeKobo)}`,
+                          value: zone.id,
+                        }))}
+                      />
+                      <AreaField
+                        name='deliveryAddress'
+                        label='Delivery address'
+                        autoComplete='street-address'
+                        placeholder='Street, building, landmark'
+                        hint='A landmark helps — most riders ask for one.'
+                      />
+                    </>
+                  ) : (
+                    <p className='st-muted text-sm'>
+                      {storeAddress
+                        ? `Collect from ${storeAddress}.`
+                        : `${tenant.name} will confirm the pickup address with you.`}
+                    </p>
+                  )}
+                </Section>
+              </div>
+
+              {/* Desktop: the summary follows the shopper down the form, so the
+                  total and the pay button are never scrolled away from. */}
+              <aside className='hidden lg:block'>
+                <div className='sticky top-24 space-y-4'>
+                  <OrderSummary
+                    zones={zones}
+                    applied={appliedCoupon}
+                    onApplied={setAppliedCoupon}
+                  />
+                  {paymentError ? <PaymentError message={paymentError} /> : null}
+                  <PayButton pending={isSubmitting} />
+                  <TrustRow />
+                </div>
+              </aside>
+
+              {/* Phone: the button belongs at the end of the form, after the
+                  last field, rather than floating over it. */}
+              <div className='lg:hidden'>
+                {paymentError ? <PaymentError message={paymentError} /> : null}
+                <PayButton pending={isSubmitting} />
+                <TrustRow />
+              </div>
             </div>
+          </div>
+        </Form>
+      )}
+    </Formik>
+  );
+}
 
-            <div className='space-y-4'>
-              <OrderSummary zones={zones} applied={appliedCoupon} />
+/** A numbered block. The numerals say how much is left, before any scrolling. */
+function Section({
+  index,
+  title,
+  children,
+}: {
+  index: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <h2 className='st-display mb-5 flex items-center gap-3 text-lg'>
+        <span
+          className='flex size-7 shrink-0 items-center justify-center rounded-full text-xs'
+          style={{ background: 'var(--st-ink)', color: 'var(--st-bg)' }}
+        >
+          {index}
+        </span>
+        {title}
+      </h2>
+      <div className='space-y-5'>{children}</div>
+    </section>
+  );
+}
 
-              {paymentError ? (
-                <p
-                  role='alert'
-                  className='rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700'
-                >
-                  {paymentError}
-                </p>
-              ) : null}
+function PayButton({ pending }: { pending: boolean }) {
+  return (
+    <button
+      type='submit'
+      disabled={pending}
+      className='st-btn st-btn-accent w-full py-4 disabled:opacity-60'
+    >
+      {pending ? 'Starting payment…' : 'Pay now'}
+    </button>
+  );
+}
 
-              <button
-                type='submit'
-                disabled={isSubmitting}
-                className='w-full rounded-md px-6 py-3 text-sm font-medium text-white disabled:opacity-60'
-                style={{ backgroundColor: 'var(--brand)' }}
-              >
-                {isSubmitting ? 'Starting payment...' : 'Pay now'}
-              </button>
+function PaymentError({ message }: { message: string }) {
+  return (
+    <p
+      role='alert'
+      className='p-3 text-sm'
+      style={{
+        border: '1px solid var(--st-sale)',
+        color: 'var(--st-sale)',
+        borderRadius: 'var(--st-radius-control)',
+      }}
+    >
+      {message}
+    </p>
+  );
+}
 
-              <p className='text-center text-xs text-gray-500'>
-                Payments are processed by Paystack. Your card details never
-                reach this store.
-              </p>
-            </div>
-          </Form>
-        )}
-      </Formik>
+function EmptyCart() {
+  return (
+    <div
+      className='st-container max-w-lg text-center'
+      style={{ paddingBlock: 'var(--st-section-y)' }}
+    >
+      <h1 className='st-display text-2xl'>Your cart is empty</h1>
+      <p className='st-muted mt-3 text-sm'>
+        There is nothing to pay for yet.
+      </p>
+      <Link href={STOREFRONT_ROUTES.home} className='st-btn st-btn-accent mt-6 inline-flex'>
+        Continue shopping
+      </Link>
     </div>
   );
 }

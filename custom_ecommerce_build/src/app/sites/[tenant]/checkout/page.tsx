@@ -22,5 +22,5 @@ export default async function CheckoutPage({
     items: Array<{ id: string; name: string; feeKobo: number }>;
   }>(storefrontApiPath(tenantSlug, '/delivery-zones'));
 
-  return <CheckoutView zones={zones} />;
+  return <CheckoutView zones={zones} storeAddress={tenant.storeAddress} />;
 }

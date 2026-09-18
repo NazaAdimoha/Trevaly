@@ -605,6 +605,83 @@ HTML can never contain ₦0.00 for a paid order.
 
 ---
 
+## What shipped — cart and checkout
+
+The last two pages still on hardcoded greys, and the ones where it cost the
+most. A shopper went: designed storefront → designed product page → **a grey
+form** → designed confirmation. The single step that handled their money looked
+the least like it belonged to the shop.
+
+### Checkout got its own form controls
+
+`@/components/fields/*` belongs to the dashboard. Those components carry
+currency masking, left slots, `cva` size variants and a fixed grey palette —
+none of which a storefront wants — so restyling them would have dragged the
+whole admin UI along, and reusing them as they were is exactly what made this
+page look borrowed.
+
+`checkout/fields.tsx` is the storefront's own: a label, a control on the store's
+tokens, an error. Thin enough that the merchant's accent, radius and typeface
+finally reach the only page where a shopper types. **It also made checkout
+41KB lighter** — see the table below.
+
+### The changes that are not paint
+
+| Change | Why |
+| --- | --- |
+| The summary shows the **items**, not four numbers | Asking someone to trust that the cart they filled ten minutes ago is the cart they are paying for, at the moment their card is in hand |
+| On a phone the summary is a `<details>` **pinned above the form** | The total is on screen before any typing, without pushing the first field below the fold. The browser owns the disclosure; we ship no JavaScript for it |
+| The coupon field moved **into the summary** | A discount field far from the total is a field people apply and then scroll to verify. Applied state replaces the input, so pressing Apply visibly did something |
+| Delivery method is **two cards, not a dropdown** | Two options that change both the rest of the form and the total. A `<select>` hides one behind a tap and has no room to say what each costs |
+| The zone picker is a **native `<select>`** | On a phone that is the OS picker — bigger targets, familiar gestures, one-handed. No custom dropdown on this page beats it |
+| Every field carries `autoComplete` | It is what lets a phone fill the contact block in one tap. Its absence is measured in abandoned carts, not in style |
+| "Delivery zone" → "**Delivery area**" | A zone is our word for it, not a shopper's |
+| The **mobile bar is hidden on checkout** | It offered Search and Menu under the shopper's thumb at the moment the shop wants no exits — and being `fixed`, it physically sat over the bottom 56px where "Pay now" is |
+
+### The cart page
+
+Rebuilt to match the drawer control for control — the same stepper, not a
+number input, because a spinner on a phone opens a keypad to turn a 1 into a 2
+and its arrows are smaller than a fingertip. Arriving from the drawer and
+finding different buttons is what makes a shop feel assembled from parts. It
+also carries the same three reassurances as the product page, in the same
+order, so they read as the shop's policy rather than copy written twice.
+
+### Two bugs the work surfaced
+
+- The quantity badge on each summary thumbnail was **clipped**: it sat inside
+  `st-media`, whose `overflow: hidden` rounds the image corners and took the
+  corner off the count with it.
+- The summary renders **twice** — the phone disclosure and the desktop column
+  are both in the DOM at every width, only one displayed — so a literal
+  `id="couponCode"` was duplicated on every checkout, silently breaking the
+  label-to-input association for whichever copy the browser matched second.
+  `useId()` now.
+
+### The JavaScript cost
+
+| Page | Before | After | Δ |
+| --- | --- | --- | --- |
+| Checkout | 253.4KB | **212.1KB** | **−41.3KB** |
+| Cart | 156.8KB | 157.8KB | +1.0KB |
+
+Checkout is still the heaviest page in the storefront — Formik, Yup and the
+Paystack popup are all real — but it no longer pays for the dashboard's form
+stack on top of them. The cart's extra kilobyte is the payment icons.
+
+### What proved it
+
+`e2e/storefront-checkout.spec.ts` (8 tests) covers what loses sales before a
+card ever appears: the total visible on a phone without hunting, a discount
+code that visibly changes it, an unknown code that says so and changes nothing,
+pickup actually stopping the address questions, the bottom bar clearing the pay
+button, and an empty cart that cannot reach a payment.
+`e2e/checkout.spec.ts` (7 tests, real Paystack) still passes — its select
+helper changed with the control, from clicking a Radix listbox to
+`selectOption`.
+
+---
+
 ## Part 10 — Decisions I need from you
 
 1. **Presets:** are the four above the right bets for the merchants you are

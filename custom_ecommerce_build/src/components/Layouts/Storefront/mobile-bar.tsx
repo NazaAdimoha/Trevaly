@@ -14,6 +14,19 @@ import { useStorefrontUi } from '@/lib/store/ui';
 import { STOREFRONT_ROUTES } from '@/constant/routes';
 
 /**
+ * Checkout is the one route the bar stays off.
+ *
+ * Two reasons, and the second is the one that actually breaks something. A
+ * bottom bar offering Search and Menu while someone is paying is an exit put
+ * under their thumb at the exact moment the shop wants none — and physically,
+ * it is fixed over the bottom 56px of the viewport, which is where "Pay now"
+ * sits on a phone. The chrome was covering the button it exists to lead to.
+ */
+export function hidesMobileBar(pathname: string): boolean {
+  return pathname === STOREFRONT_ROUTES.checkout;
+}
+
+/**
  * The bar pinned to the bottom of a phone.
  *
  * Reaching a header at the top of a 6.7" screen means a hand adjustment; the
@@ -35,7 +48,7 @@ export function MobileBar({ bar }: { bar: StorefrontLayout['mobileBar'] }) {
   // Orders are placed as a guest — there is no customer account to open yet, so
   // an account tab is dropped rather than rendered as a link to nowhere.
   const tabs = bar.items.filter((item) => item !== 'account');
-  if (!bar.enabled || tabs.length === 0) return null;
+  if (!bar.enabled || tabs.length === 0 || hidesMobileBar(pathname)) return null;
 
   const entries = tabs.map((item) => {
     switch (item) {
