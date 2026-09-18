@@ -105,11 +105,14 @@ export default function SettingsScreen() {
           label="Store details and logo"
           onPress={() => router.push('/(app)/store-settings')}
         />
+        {/* Was a link out to the web, back when picking a theme was the only
+            thing a merchant could do to their storefront. Design replaces it:
+            presets, sections and publishing all happen here now, on the phone
+            they photograph products with. */}
         <SettingsRow
           icon="color-palette-outline"
-          label="Storefront theme"
-          web
-          onPress={() => openWeb('/settings')}
+          label="Design your storefront"
+          onPress={() => router.push('/(app)/design')}
         />
         <SettingsRow
           icon="globe-outline"

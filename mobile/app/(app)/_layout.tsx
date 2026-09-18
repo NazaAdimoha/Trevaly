@@ -110,6 +110,12 @@ export default function AppLayout() {
           name="store-settings"
           options={{ href: null, title: 'Store settings' }}
         />
+        {/* Design is a whole stack of its own, so it also hides its tab header
+            — the stack inside renders one. */}
+        <Tabs.Screen
+          name="design"
+          options={{ href: null, title: 'Design', headerShown: false }}
+        />
       </Tabs>
     </ConfigProvider>
   );

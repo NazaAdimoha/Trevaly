@@ -682,6 +682,73 @@ helper changed with the control, from clicking a Radix listbox to
 
 ---
 
+## What shipped — Phase 5: the Design editor in the mobile app
+
+The other half of the original ask: *"can the tenant configure all of these
+from the mobile app and have them show up on the storefront"*. They can now.
+Settings → **Design your storefront** opens a three-level stack — appearance,
+a page's sections, one section's settings — with a publish bar on every screen.
+
+### There is no per-section screen, and there never will be
+
+Every control on the settings form is **generated from the section's registry
+entry**. The same `fields` array that the API validates against and the web
+renderer reads is what the phone builds a form from. `src/ui/fields.tsx` has
+one control per field type — text, textarea, toggle, stepper, chips, colour,
+Cloudinary image, date-time, and repeatable blocks — and that is the whole
+editor.
+
+Adding "Countdown bar" ships one web component and one registry entry. The
+phone gets a working editor for it **with no app release**. That is the reason
+the registry has the shape it has, and this is the file that cashes it in.
+
+### Decisions worth recording
+
+| Decision | Why |
+| --- | --- |
+| Reorder is **two arrows**, not drag-and-drop | A long-press drag inside a scrolling list is the most failure-prone interaction on a phone — it fights the scroll, needs a gesture handler, and is close to unusable with a motor impairment. Arrows are unambiguous, one-handed, and work with a screen reader |
+| Presets are described by **who they are for** | "Fashion, shot on a model" lands; "high-contrast editorial" does not |
+| Blocks render **inline**, not behind another push | Someone writing five FAQ entries should see five entries, not five screens. Depth is what makes a phone editor feel slower than a laptop one |
+| Text commits **on blur** | The draft is a shared store; writing per keystroke re-renders the section list and publish bar too |
+| Autosave is **one module-level timer** | The Design screens are a stack, so all three are mounted at once. An effect per screen would fire three saves, and the second and third would carry a version the first had already spent — 409 on the merchant's own edit |
+| Reads are **not** cached through `useQuery` | That hook trades staleness for a non-blank screen, which is right for read-only screens. Here a stale layout carries a stale `version`, and the first save would be refused over work the merchant cannot see |
+
+### Four bugs caught before they shipped
+
+- **`publish-bar.tsx` became a route.** expo-router turns every file under
+  `app/` into a navigable screen, and `/design/publish-bar` really did appear in
+  the generated route types. Components live in `src/`.
+- **`design/` would have become a fifth tab** — it needed `href: null` like the
+  other Settings sub-pages.
+- **`structuredClone` is not in Hermes.** It would have crashed on the
+  merchant's first edit rather than at build time. A JSON round trip is exact
+  for a layout in any case, since that is how it is stored and sent.
+- **Discard was offered on stores that had never published.** `revert` restores
+  the *published* layout, so it answers 409 when there is none — a button that
+  could only fail.
+
+### What is not in yet
+
+Honest list, so nobody discovers these by tapping: the announcement bar, header,
+footer and phone tab bar are shown as read-only state rather than edited (they
+are not sections and need their own screen); hero hotspots cannot be placed by
+tapping a photo; product and collection fields take a slug rather than offering
+a picker; and there is no in-app preview of the draft — publishing is still the
+way to see it, which is what makes the draft/published split and the Discard
+button carry the weight for now.
+
+### What proved it
+
+`tsc --noEmit` clean, and `expo export` bundles — which is the real test here,
+because it is what proves `@core/storefront/*` (written for Node and the web,
+Zod and all) resolves into a React Native bundle at all. On the API side the
+ten live layout tests pass against a real database and a real Clerk session:
+seeding on first open, a draft staying invisible to shoppers, a stale version
+being refused rather than overwriting the other editor, another store's images
+being refused, and a broken stored layout never taking a storefront down.
+
+---
+
 ## Part 10 — Decisions I need from you
 
 1. **Presets:** are the four above the right bets for the merchants you are
