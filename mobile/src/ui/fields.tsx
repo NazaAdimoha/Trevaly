@@ -88,7 +88,6 @@ export function FieldControl({
         return <ColorField value={asString(value)} onChange={onChange} />;
 
       case 'image':
-      case 'video':
         return (
           <MediaField
             value={value === null || value === undefined ? null : asString(value)}
@@ -97,6 +96,15 @@ export function FieldControl({
             cloudName={cloudName}
           />
         );
+
+      case 'video':
+        // Said plainly rather than shown as a picker that quietly uploads a
+        // still to the image endpoint, which is what this did before. The
+        // storefront renders a hero video correctly today; what is missing is
+        // an upload path, and that is blocked on the plan rather than on code —
+        // Cloudinary rations HEVC transcoding on the Free tier hard enough that
+        // even a HEIC photo bounces with `429 Out of Processing Capacity`.
+        return <NotYet />;
 
       case 'datetime':
         return <WhenField value={asString(value)} onChange={onChange} />;
@@ -147,6 +155,19 @@ export function FieldControl({
 }
 
 const asString = (value: unknown) => (typeof value === 'string' ? value : '');
+
+/** A field the storefront supports but the app cannot fill in yet. */
+function NotYet() {
+  return (
+    <View style={styles.notYet}>
+      <Ionicons name='information-circle-outline' size={18} color={color.muted} />
+      <Text style={styles.help}>
+        Video backgrounds are not editable from the app yet. Your shop will play
+        one if it is already set.
+      </Text>
+    </View>
+  );
+}
 
 /**
  * Text, committed on blur.
@@ -511,6 +532,15 @@ const styles = StyleSheet.create({
   mediaImage: { width: '100%', height: '100%' },
   mediaEmpty: { alignItems: 'center', gap: space.xs },
   remove: { ...text.small, color: color.danger, marginTop: space.sm },
+
+  notYet: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.sm,
+    backgroundColor: color.sunk,
+    borderRadius: radius.md,
+    padding: space.md,
+  },
 
   when: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   whenText: { ...text.body, color: color.ink },

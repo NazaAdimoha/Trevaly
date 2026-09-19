@@ -1,4 +1,5 @@
 import { File, UploadType } from 'expo-file-system';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 import { api, toApiError } from './client';
 import { uploadConfigSchema, uploadSignatureSchema } from './schemas';
@@ -27,9 +28,58 @@ const ACCEPTED_MIME = /^image\/(jpe?g|png|webp|avif|heic|heif)$/i;
  *  data is not made to upload a file that will be rejected on arrival. */
 const MAX_BYTES = 10_485_760;
 
+/**
+ * Formats Cloudinary has to DECODE rather than just store.
+ *
+ * HEIC/HEIF are HEVC-encoded, and decoding HEVC is rationed on Cloudinary's
+ * Free plan: an upload comes back `429 Slow Down, Out of Processing Capacity`
+ * perhaps two times in three, then succeeds — verified directly against the
+ * account, with and without our `allowed_formats`, while a PNG posted seconds
+ * later went through every time. Nothing about it is a rate limit we can wait
+ * out, and nothing about it is our signature.
+ *
+ * Every photo an iPhone takes is one of these by default, so on that plan most
+ * merchants would simply find that images "sometimes don't upload".
+ */
+const NEEDS_TRANSCODE = /^image\/(heic|heif)$/i;
+
+/**
+ * Re-encode a HEIC/HEIF photo to JPEG before it leaves the phone.
+ *
+ * This is the fix for the above, and it is better than the alternatives on
+ * their own terms: the phone already has a hardware HEVC decoder and does this
+ * in milliseconds, the resulting JPEG is usually SMALLER over Nigerian mobile
+ * data, and Cloudinary never has to decode anything — so the failure cannot
+ * come back on a busy day or a different plan.
+ *
+ * Anything else is passed through untouched; re-encoding a JPEG would cost a
+ * generation of quality for nothing.
+ */
+async function toUploadable(file: {
+  uri: string;
+  mimeType?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+}) {
+  if (!file.mimeType || !NEEDS_TRANSCODE.test(file.mimeType)) return file;
+
+  const converted = await manipulateAsync(file.uri, [], {
+    compress: 0.9,
+    format: SaveFormat.JPEG,
+  });
+
+  return {
+    uri: converted.uri,
+    mimeType: 'image/jpeg',
+    fileName: (file.fileName ?? 'photo').replace(/\.(heic|heif)$/i, '.jpg'),
+    // The size changed, and the old one would make the guard below lie.
+    fileSize: null,
+  };
+}
+
 export async function uploadProductImage(
   storeSlug: string,
-  file: {
+  original: {
     uri: string;
     mimeType?: string | null;
     fileName?: string | null;
@@ -40,12 +90,15 @@ export async function uploadProductImage(
   // Validated HERE rather than at each picker. Every caller passes through this
   // function, and the previous code defaulted an absent MIME type to
   // 'image/jpeg' — asserting something it had not checked.
-  if (file.mimeType && !ACCEPTED_MIME.test(file.mimeType)) {
+  if (original.mimeType && !ACCEPTED_MIME.test(original.mimeType)) {
     throw new Error('Choose a photo — JPG, PNG, WEBP or HEIC.');
   }
-  if (file.fileSize && file.fileSize > MAX_BYTES) {
+  if (original.fileSize && original.fileSize > MAX_BYTES) {
     throw new Error('That photo is over 10 MB. Try a smaller one.');
   }
+
+  // Checked before conversion, on the size the merchant actually picked.
+  const file = await toUploadable(original);
 
   try {
     const { data: rawConfig } = await api.get(
@@ -100,15 +153,32 @@ export async function uploadProductImage(
       ...(enforced ? { allowed_formats: enforced.allowed_formats } : {}),
     };
 
-    const upload = await new File(file.uri).upload(
-      `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`,
-      {
-        uploadType: UploadType.MULTIPART,
-        fieldName: 'file',
-        mimeType: file.mimeType ?? 'image/jpeg',
-        parameters,
-      },
-    );
+    const endpoint = `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`;
+    const options = {
+      uploadType: UploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: file.mimeType ?? 'image/jpeg',
+      parameters,
+    } as const;
+
+    /**
+     * Retried on 429 only.
+     *
+     * Converting HEIC on the phone removes the reason this account saw 429s,
+     * but not the possibility: Cloudinary throttles by capacity, so a big photo
+     * on a busy afternoon can still bounce. Two extra attempts a couple of
+     * seconds apart is the difference between "it worked" and a merchant
+     * deciding the app is broken.
+     *
+     * Nothing else is retried. A 400 is a bad signature or a rejected format
+     * and will fail identically forever; retrying it just makes the error
+     * take six seconds to arrive.
+     */
+    let upload = await new File(file.uri).upload(endpoint, options);
+    for (let attempt = 1; attempt <= 2 && upload.status === 429; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+      upload = await new File(file.uri).upload(endpoint, options);
+    }
 
     // `upload` resolves for ANY completed response, including a 4xx — it
     // rejects only when the file cannot be read or the request never
@@ -119,6 +189,11 @@ export async function uploadProductImage(
       error?: { message?: string };
     };
 
+    if (upload.status === 429) {
+      // Cloudinary says "Slow Down, Out of Processing Capacity", which reads
+      // as the merchant's fault. It is not.
+      throw new Error('Our image service is busy. Please try that photo again.');
+    }
     if (upload.status >= 400 || !result.public_id) {
       throw new Error(result.error?.message ?? 'Upload failed');
     }
