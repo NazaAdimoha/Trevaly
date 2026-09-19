@@ -1,3 +1,5 @@
+import { File, UploadType } from 'expo-file-system';
+
 import { api, toApiError } from './client';
 import { uploadConfigSchema, uploadSignatureSchema } from './schemas';
 
@@ -71,33 +73,53 @@ export async function uploadProductImage(
     const signed = uploadSignatureSchema.parse(rawSigned);
     const enforced = signed.enforced;
 
-    const body = new FormData();
-    body.append('file', {
-      uri: file.uri,
-      type: file.mimeType ?? 'image/jpeg',
-      name: file.fileName ?? `${kind}-${timestamp}.jpg`,
-    } as unknown as Blob);
-    body.append('api_key', config.apiKey);
-    body.append('timestamp', String(timestamp));
-    body.append('folder', folder);
-    body.append('signature', signed.signature);
+    /**
+     * Uploaded with `expo-file-system`, NOT `fetch` + `FormData`.
+     *
+     * This used to append React Native's `{ uri, type, name }` part to a
+     * `FormData` and hand it to the global `fetch`. That stopped working in
+     * Expo SDK 57, which replaces the global `fetch` with its WinterCG
+     * implementation — and that one accepts only a string, a real `Blob`, or an
+     * object with `bytes()`. A `uri` part is none of those, so every image
+     * upload in the app failed with "Unsupported FormDataPart implementation".
+     * Expo's own converter says so in a comment: `uri` is not supported.
+     *
+     * `File.upload` is the right tool rather than the nearest workaround. The
+     * obvious patch — read the file into a `Blob` and append that — would pull
+     * a 10MB photo through the JS heap on a mid-range Android. This streams it
+     * from disk natively, and it speaks multipart itself, so the parameters
+     * below are the same ones Cloudinary was already being sent.
+     */
+    const parameters: Record<string, string> = {
+      api_key: config.apiKey,
+      timestamp: String(timestamp),
+      folder,
+      signature: signed.signature,
+      // Echoed back exactly as signed. Omitting any of these is a signature
+      // mismatch, which is the point: the limits cannot be dropped by the client.
+      ...(enforced ? { allowed_formats: enforced.allowed_formats } : {}),
+    };
 
-    // Echoed back exactly as signed. Omitting any of these is a signature
-    // mismatch, which is the point: the limits cannot be dropped by the client.
-    if (enforced) {
-      body.append('allowed_formats', enforced.allowed_formats);
-    }
-
-    const response = await fetch(
+    const upload = await new File(file.uri).upload(
       `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`,
-      { method: 'POST', body },
+      {
+        uploadType: UploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: file.mimeType ?? 'image/jpeg',
+        parameters,
+      },
     );
-    const result = (await response.json()) as {
+
+    // `upload` resolves for ANY completed response, including a 4xx — it
+    // rejects only when the file cannot be read or the request never
+    // completed. The status has to be checked here or a rejected upload would
+    // read as a success with no public id.
+    const result = JSON.parse(upload.body || '{}') as {
       public_id?: string;
       error?: { message?: string };
     };
 
-    if (!response.ok || !result.public_id) {
+    if (upload.status >= 400 || !result.public_id) {
       throw new Error(result.error?.message ?? 'Upload failed');
     }
     return result.public_id;
