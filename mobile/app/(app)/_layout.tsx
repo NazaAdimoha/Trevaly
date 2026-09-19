@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import type { ColorValue } from 'react-native';
 
 import { ConfigProvider } from '@/api/config';
 import { color, font, text } from '@/theme';
@@ -43,7 +44,11 @@ function tabIcon(name: keyof typeof TAB_ICON) {
     size,
   }: {
     focused: boolean;
-    color: string;
+    // `ColorValue`, not `string`: React Native 0.86 widened this prop, and a
+    // platform colour (`PlatformColor`, `DynamicColorIOS`) is an opaque object
+    // rather than a hex string. `Ionicons` accepts both, so the only thing that
+    // had to change is what we claim to receive.
+    color: ColorValue;
     size: number;
   }) {
     return (
