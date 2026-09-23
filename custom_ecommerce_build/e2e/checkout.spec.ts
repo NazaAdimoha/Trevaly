@@ -1,17 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
-
-import { E2E_TENANT, LOCAL_ORIGIN, hostHeader } from '../playwright.config';
+import { expect, type Page,test } from '@playwright/test';
 
 import {
   getOrder,
   getProductById,
   getVariantById,
   one,
+  type OrderRow,
   setStock,
   setVariantStock,
   sql,
-  type OrderRow,
 } from './db';
+import { E2E_TENANT, hostHeader,LOCAL_ORIGIN } from '../playwright.config';
 
 /**
  * M6 exit criteria, run against a live server and the real Paystack test gateway.

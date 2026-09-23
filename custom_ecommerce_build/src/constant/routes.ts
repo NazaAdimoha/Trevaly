@@ -67,6 +67,8 @@ const ROUTES = {
 /** Paths within a tenant storefront, relative to that store's own hostname. */
 export const STOREFRONT_ROUTES = {
   home: '/',
+  /** Every product, unfiltered — what a hero's "Browse all" points at. */
+  products: '/products',
   product: (slug: string) => `/products/${slug}`,
   category: (slug: string) => `/categories/${slug}`,
   cart: '/cart',

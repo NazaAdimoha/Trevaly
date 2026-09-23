@@ -76,6 +76,57 @@ test.describe('collection page', () => {
   });
 });
 
+test.describe('all products', () => {
+  test('/products exists, and is the same page as a collection', async ({ page }) => {
+    // It did not exist, and it was reachable: a hero's second button defaults
+    // to "Browse all", the section editor offers `/products` as a link, and a
+    // published layout pointed two CTAs at it. A shopper following the most
+    // prominent link under the headline got a 404.
+    const response = await page.goto(`${origin}/products`);
+    expect(response?.status()).toBe(200);
+
+    await expect(page.getByRole('heading', { name: 'All products', level: 1 })).toBeVisible();
+    expect(await listed(page)).not.toHaveLength(0);
+
+    // Every control a category page has, because it is the same component.
+    await expect(page.locator('main').getByText(/^\d+ items?$/).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'In stock only' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Show more per row' })).toBeVisible();
+
+    // And the "All" pill is the active one here, not a category.
+    await expect(page.getByRole('link', { name: 'All', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  test('sorting works here too, and stays in the URL', async ({ page }) => {
+    await page.goto(`${origin}/products`);
+    const before = await listed(page);
+    test.skip(before.length < 2, 'one product — nothing to reorder');
+
+    await page.getByText(/Sort:/).click();
+    await page.getByRole('link', { name: /Price, low to high/ }).click();
+
+    await expect(page).toHaveURL(/\/products\?.*sort=price-asc/);
+    const after = await listed(page);
+    expect(after.slice().sort()).toEqual(before.slice().sort());
+    expect(after).not.toEqual(before);
+  });
+
+  test('a category pill narrows it, and leads somewhere real', async ({ page }) => {
+    await page.goto(`${origin}/products`);
+    const all = await listed(page);
+
+    const pill = page.locator('main a[href^="/categories/"]').first();
+    test.skip(!(await pill.count()), 'this store has no categories');
+    await pill.click();
+
+    await expect(page).toHaveURL(/\/categories\//);
+    expect((await listed(page)).length).toBeLessThanOrEqual(all.length);
+  });
+});
+
 test.describe('product page', () => {
   test('the gallery swaps the main image, and the sticky bar waits its turn', async ({
     page,

@@ -4,6 +4,7 @@ import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
 import { apiGet } from '@/lib/server-api';
 
 import { resolveStorefrontTenant, storefrontApiPath } from '@/app/sites/_tenant';
+import { STOREFRONT_ROUTES } from '@/constant/routes';
 
 /**
  * Per-tenant `sitemap.xml`.
@@ -56,6 +57,14 @@ export async function GET(
   const now = new Date();
   const entries = [
     { loc: tenantOrigin(tenant), lastmod: now, priority: '1.0' },
+    // Every product on one indexable page, and the fallback route into the
+    // catalogue for a store that has no categories at all — where the list
+    // below would otherwise be empty and products would have no parent page.
+    {
+      loc: tenantUrl(tenant, STOREFRONT_ROUTES.products),
+      lastmod: now,
+      priority: '0.9',
+    },
     // Above products on purpose: a category is the broadest term a store will
     // rank for, and it is the page a crawler should reach the catalogue through.
     ...categories.map((category) => ({

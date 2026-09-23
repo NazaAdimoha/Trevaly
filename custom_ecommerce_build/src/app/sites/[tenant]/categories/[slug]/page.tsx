@@ -4,13 +4,8 @@ import { notFound } from 'next/navigation';
 import { tenantOrigin, tenantUrl } from '@/lib/domains/canonical';
 
 import JsonLd from '@/components/JsonLd';
-import {
-  CollectionToolbar,
-  densityVars,
-  parseCollectionQuery,
-} from '@/components/pages/storefront/collection/toolbar';
-import ProductGrid from '@/components/pages/storefront/home';
-import { SectionRenderer } from '@/components/pages/storefront/sections';
+import { CollectionView } from '@/components/pages/storefront/collection';
+import { parseCollectionQuery } from '@/components/pages/storefront/collection/toolbar';
 
 import {
   getStorefrontCatalog,
@@ -110,44 +105,22 @@ export default async function StorefrontCategoryPage({ params, searchParams }: R
   return (
     <>
       <JsonLd data={breadcrumbSchema} />
-
-      <header className='st-container' style={{ paddingTop: 'var(--st-section-y)' }}>
-        <h1 className='st-display text-3xl md:text-4xl'>{category.name}</h1>
-      </header>
-
-      <CollectionToolbar
+      <CollectionView
+        title={category.name}
         base={base}
         query={query}
+        products={products}
         total={total}
-        siblings={categories}
+        categories={categories}
         activeSlug={category.slug}
+        storeName={tenant.name}
+        emptyMessage={
+          query.inStock
+            ? `Everything in ${category.name.toLowerCase()} is sold out right now. Turn off "in stock only" to see it all.`
+            : `No ${category.name.toLowerCase()} in stock right now.`
+        }
+        sections={sections}
       />
-
-      {/* Density is three custom properties on this wrapper — the grid already
-          reads its column counts from tokens, so a shopper changing how much
-          they see costs no new CSS and no JavaScript. */}
-      <div style={densityVars(query.density)}>
-        <ProductGrid
-          products={products}
-          storeName={tenant.name}
-          emptyMessage={
-            query.inStock
-              ? `Everything in ${category.name.toLowerCase()} is sold out right now. Turn off "in stock only" to see it all.`
-              : `No ${category.name.toLowerCase()} in stock right now.`
-          }
-        />
-      </div>
-
-      {/* Whatever the merchant put beneath every collection: the sizing note,
-          the delivery promise, the story behind the range. */}
-      {sections.length > 0 ? (
-        <SectionRenderer
-          sections={sections}
-          products={products}
-          categories={categories}
-          storeName={tenant.name}
-        />
-      ) : null}
     </>
   );
 }

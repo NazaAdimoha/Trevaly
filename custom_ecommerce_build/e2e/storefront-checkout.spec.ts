@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page,test } from '@playwright/test';
 
 import { E2E_TENANT, storefrontOrigin } from '../playwright.config';
 
@@ -26,7 +26,7 @@ async function addOneItem(page: Page) {
 /** The first naira figure in a chunk of text, in kobo. */
 const nairaIn = (text: string | null) => {
   const match = /₦([\d,]+(?:\.\d{2})?)/.exec(text ?? '');
-  return match ? Math.round(Number(match[1]!.replace(/,/g, '')) * 100) : null;
+  return match ? Math.round(Number((match[1] ?? '0').replace(/,/g, '')) * 100) : null;
 };
 
 test.describe('cart page', () => {
@@ -36,13 +36,14 @@ test.describe('cart page', () => {
 
     const subtotal = page.locator('main').getByText(/^₦[\d,]/).last();
     const before = nairaIn(await subtotal.textContent());
+    if (before === null) throw new Error('No subtotal on the cart page');
     expect(before).toBeGreaterThan(0);
 
     await page.getByRole('button', { name: /^Increase quantity/ }).first().click();
 
     await expect
       .poll(async () => nairaIn(await subtotal.textContent()))
-      .toBe(before! * 2);
+      .toBe(before * 2);
   });
 
   test('removing the last item leaves a way back into the shop', async ({ page }) => {
@@ -109,6 +110,7 @@ test.describe('checkout page', () => {
     const summary = page.locator('aside');
     const total = summary.getByText(/^₦[\d,]/).last();
     const before = nairaIn(await total.textContent());
+    if (before === null) throw new Error('No total in the order summary');
 
     await summary.getByLabel('Discount code').fill('WELCOME10');
     await summary.getByRole('button', { name: 'Apply' }).click();
@@ -121,7 +123,7 @@ test.describe('checkout page', () => {
     await expect(summary.getByText(/^Discount · WELCOME10/)).toBeVisible();
     await expect
       .poll(async () => nairaIn(await total.textContent()))
-      .toBeLessThan(before!);
+      .toBeLessThan(before);
   });
 
   test('an unknown code says so and leaves the total alone', async ({ page }) => {
