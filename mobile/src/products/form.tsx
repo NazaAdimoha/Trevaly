@@ -11,6 +11,13 @@ import {
 } from 'react-native';
 
 import { toMajor, toMinor } from '@core/money';
+import {
+  COLOUR_CHOICES,
+  colourOf,
+  isColourAxis,
+  numericRange,
+  SIZE_SCALES,
+} from '@core/option-values';
 import { variantRejectionReason } from '@core/validation/product';
 
 import { color, font, radius, space, text } from '@/theme';
@@ -355,16 +362,36 @@ function Chip({
 }
 
 /**
- * Options — sizes, colours, weights.
+ * Options — sizes, colours, weights, or anything else.
  *
- * Deliberately ONE axis, matching the schema: a dress in S/M/L, a shoe in
- * 39-44, rice in 5kg/10kg. That covers nearly everything a thirty-product shop
- * sells, and a merchant who genuinely needs two lists "Red / Small" as a value.
+ * Still ONE axis, which is the schema's deliberate choice: a dress in S/M/L, a
+ * shoe in 39-44, rice in 5kg/10kg. What changed is that the axis stopped
+ * *looking* like sizes. It was always free text — "Colour" has been as possible
+ * as "Size" since the first migration — but the form hardcoded a "Size"
+ * placeholder and an empty row, so a merchant selling in colours had no reason
+ * to think they could, and one selling shoes in 38-45 typed eight rows by hand.
  *
- * Each option carries its own count, because that is what the storefront
- * actually reads — selling the last size 42 must not mark size 40 sold out. The
- * price is left blank to inherit, so the common case is no typing at all.
+ * Now the axis is picked first, and each kind brings the way you would actually
+ * enter it: swatches for colour, a letter scale or a number range for size, a
+ * range with a unit for weight.
  */
+type Axis = 'Size' | 'Colour' | 'Weight' | 'Other';
+
+const AXES: { key: Axis; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'Size', label: 'Size', icon: 'resize-outline' },
+  { key: 'Colour', label: 'Colour', icon: 'color-palette-outline' },
+  { key: 'Weight', label: 'Weight', icon: 'scale-outline' },
+  { key: 'Other', label: 'Something else', icon: 'options-outline' },
+];
+
+/** Which kind of axis an option name reads as, for reopening an edit. */
+function axisOf(optionName: string): Axis {
+  if (isColourAxis(optionName)) return 'Colour';
+  if (/size|fit/i.test(optionName)) return 'Size';
+  if (/weight|kg|gram|litre|liter|volume/i.test(optionName)) return 'Weight';
+  return optionName ? 'Other' : 'Size';
+}
+
 function Options({
   optionName,
   variants,
@@ -377,12 +404,33 @@ function Options({
   onVariants: (next: VariantDraft[]) => void;
 }) {
   const [open, setOpen] = useState(variants.length > 0);
+  const [axis, setAxis] = useState<Axis>(() => axisOf(optionName));
 
   const replace = (index: number, patch: Partial<VariantDraft>) =>
     onVariants(variants.map((v, i) => (i === index ? { ...v, ...patch } : v)));
 
-  const add = () =>
-    onVariants([...variants, { value: '', price: '', stock: '1', isActive: true }]);
+  const blank = (value = ''): VariantDraft => ({
+    value,
+    price: '',
+    stock: '1',
+    isActive: true,
+  });
+
+  /**
+   * Add values, skipping any the product already has.
+   *
+   * Silent rather than an error: tapping "S · M · L" twice, or adding XS→XXL on
+   * top of S/M/L, should top up the list rather than refuse it or create a
+   * duplicate the API would reject with a message about a value the merchant
+   * cannot see.
+   */
+  const addValues = (values: string[]) => {
+    const seen = new Set(variants.map((v) => v.value.trim().toLowerCase()));
+    const fresh = values
+      .filter((value) => !seen.has(value.trim().toLowerCase()))
+      .map((value) => blank(value));
+    if (fresh.length > 0) onVariants([...variants, ...fresh]);
+  };
 
   const remove = (index: number) => {
     const next = variants.filter((_, i) => i !== index);
@@ -392,88 +440,263 @@ function Options({
     if (next.length === 0) onOptionName('');
   };
 
+  const start = (chosen: Axis) => {
+    setAxis(chosen);
+    setOpen(true);
+    onOptionName(chosen === 'Other' ? '' : chosen);
+  };
+
   if (!open) {
     return (
-      <Pressable
-        onPress={() => {
-          setOpen(true);
-          add();
-        }}
-        accessibilityRole='button'
-        style={({ pressed }) => [styles.add, pressed && styles.pressed]}
-      >
-        <Ionicons name='add' size={16} color={color.primary700} />
-        <Text style={styles.addText}>Sell this in sizes or colours</Text>
-      </Pressable>
+      <View style={styles.field}>
+        <Text style={styles.label}>Does this come in different versions?</Text>
+        <Text style={styles.hint}>
+          Sizes, colours, weights — each one keeps its own stock count.
+        </Text>
+        <View style={styles.axisRow}>
+          {AXES.map((option) => (
+            <Pressable
+              key={option.key}
+              onPress={() => start(option.key)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.axis, pressed && styles.pressed]}
+            >
+              <Ionicons name={option.icon} size={18} color={color.primary700} />
+              <Text style={styles.axisText}>{option.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
     );
   }
 
   return (
     <View style={styles.options}>
-      <Field label='What varies?' hint='Size, Colour, Weight — whatever a shopper picks.'>
+      <Field label="What varies?" hint="This is the word a shopper sees above the choices.">
         <TextInput
           value={optionName}
-          onChangeText={onOptionName}
-          placeholder='Size'
+          onChangeText={(value) => {
+            onOptionName(value);
+            setAxis(axisOf(value));
+          }}
+          placeholder="Size"
           placeholderTextColor={color.muted}
           style={styles.input}
         />
       </Field>
 
-      {variants.map((variant, index) => (
-        <View key={variant.id ?? index} style={styles.variant}>
-          <View style={styles.variantHead}>
-            <TextInput
-              value={variant.value}
-              onChangeText={(value) => replace(index, { value })}
-              placeholder={optionName ? `e.g. ${index === 0 ? 'Small' : 'Large'}` : 'Value'}
-              placeholderTextColor={color.muted}
-              style={[styles.input, styles.variantValue]}
-            />
-            <Pressable
-              onPress={() => remove(index)}
-              accessibilityRole='button'
-              accessibilityLabel={`Remove option ${index + 1}`}
-              hitSlop={8}
-              style={styles.variantRemove}
-            >
-              <Ionicons name='trash-outline' size={18} color={color.danger} />
-            </Pressable>
-          </View>
+      {axis === 'Colour' ? (
+        <ColourAdder
+          chosen={variants.map((v) => v.value)}
+          onAdd={(value) => addValues([value])}
+        />
+      ) : (
+        <ValueAdder axis={axis} onAdd={addValues} />
+      )}
 
-          <View style={styles.variantRow}>
-            <View style={styles.variantCell}>
-              <Text style={styles.hint}>How many</Text>
+      {variants.map((variant, index) => {
+        const swatch = colourOf(variant.value);
+        return (
+          <View key={variant.id ?? index} style={styles.variant}>
+            <View style={styles.variantHead}>
+              {swatch ? (
+                <View style={[styles.swatchDot, { backgroundColor: swatch }]} />
+              ) : null}
               <TextInput
-                value={variant.stock}
-                onChangeText={(value) => replace(index, { stock: value })}
-                keyboardType='number-pad'
-                style={styles.input}
-              />
-            </View>
-            <View style={styles.variantCell}>
-              <Text style={styles.hint}>Price (optional)</Text>
-              <TextInput
-                value={variant.price}
-                onChangeText={(value) => replace(index, { price: value })}
-                keyboardType='numeric'
-                placeholder='Same'
+                value={variant.value}
+                onChangeText={(value) => replace(index, { value })}
+                placeholder="Value"
                 placeholderTextColor={color.muted}
-                style={styles.input}
+                style={[styles.input, styles.variantValue]}
               />
+              <Pressable
+                onPress={() => remove(index)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${variant.value || `option ${index + 1}`}`}
+                hitSlop={8}
+                style={styles.variantRemove}
+              >
+                <Ionicons name="trash-outline" size={18} color={color.danger} />
+              </Pressable>
+            </View>
+
+            <View style={styles.variantRow}>
+              <View style={styles.variantCell}>
+                <Text style={styles.hint}>How many</Text>
+                <TextInput
+                  value={variant.stock}
+                  onChangeText={(value) => replace(index, { stock: value })}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.variantCell}>
+                <Text style={styles.hint}>Price (optional)</Text>
+                <TextInput
+                  value={variant.price}
+                  onChangeText={(value) => replace(index, { price: value })}
+                  keyboardType="numeric"
+                  placeholder="Same"
+                  placeholderTextColor={color.muted}
+                  style={styles.input}
+                />
+              </View>
             </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
 
       <Pressable
-        onPress={add}
-        accessibilityRole='button'
+        onPress={() => addValues([''])}
+        accessibilityRole="button"
         style={({ pressed }) => [styles.add, pressed && styles.pressed]}
       >
-        <Ionicons name='add' size={16} color={color.primary700} />
-        <Text style={styles.addText}>Add another</Text>
+        <Ionicons name="add" size={16} color={color.primary700} />
+        <Text style={styles.addText}>Add one by hand</Text>
       </Pressable>
+    </View>
+  );
+}
+
+/**
+ * The colour picker: tap a swatch, get the colour.
+ *
+ * The variant stores the NAME, not the hex — that is what an order email, a
+ * receipt and a WhatsApp message have to say, and what the storefront already
+ * renders. The swatch is drawn from the shared palette at display time, so no
+ * column had to be added to show a circle.
+ */
+function ColourAdder({
+  chosen,
+  onAdd,
+}: {
+  chosen: string[];
+  onAdd: (value: string) => void;
+}) {
+  const taken = new Set(chosen.map((value) => value.trim().toLowerCase()));
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.hint}>Tap a colour to add it</Text>
+      <View style={styles.palette}>
+        {COLOUR_CHOICES.map(([label, css]) => {
+          const already = taken.has(label.toLowerCase());
+          return (
+            <Pressable
+              key={label}
+              onPress={() => onAdd(label)}
+              disabled={already}
+              accessibilityRole="button"
+              accessibilityLabel={already ? `${label}, already added` : `Add ${label}`}
+              style={({ pressed }) => [
+                styles.swatch,
+                { backgroundColor: css },
+                already && styles.swatchTaken,
+                pressed && styles.pressed,
+              ]}
+            >
+              {already ? (
+                // Ticked rather than hidden: a merchant scanning for "did I add
+                // navy" should see it in place, not wonder where it went.
+                <Ionicons
+                  name="checkmark"
+                  size={16}
+                  color={css === '#FFFFFF' || css === '#FFFFF0' ? color.ink : '#FFFFFF'}
+                />
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/** Letter scales and number ranges — whatever the axis calls for. */
+function ValueAdder({ axis, onAdd }: { axis: Axis; onAdd: (values: string[]) => void }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [unit, setUnit] = useState(axis === 'Weight' ? 'kg' : '');
+
+  const range = numericRange(Number(from), Number(to), 1, unit.trim());
+  const canAdd = from.trim() !== '' && to.trim() !== '' && range.length > 0;
+
+  return (
+    <View style={styles.field}>
+      {axis === 'Size' ? (
+        <>
+          <Text style={styles.hint}>Add a whole scale at once</Text>
+          <View style={styles.axisRow}>
+            {SIZE_SCALES.map((scale) => (
+              <Pressable
+                key={scale.label}
+                onPress={() => onAdd(scale.values)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.scale, pressed && styles.pressed]}
+              >
+                <Text style={styles.scaleText}>{scale.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      <Text style={[styles.hint, styles.rangeLabel]}>
+        {axis === 'Weight' ? 'Or a range of weights' : 'Or a range of numbers'}
+      </Text>
+      <View style={styles.rangeRow}>
+        <TextInput
+          value={from}
+          onChangeText={setFrom}
+          keyboardType="numeric"
+          placeholder={axis === 'Weight' ? '1' : '38'}
+          placeholderTextColor={color.muted}
+          style={[styles.input, styles.rangeInput]}
+        />
+        <Text style={styles.rangeTo}>to</Text>
+        <TextInput
+          value={to}
+          onChangeText={setTo}
+          keyboardType="numeric"
+          placeholder={axis === 'Weight' ? '10' : '45'}
+          placeholderTextColor={color.muted}
+          style={[styles.input, styles.rangeInput]}
+        />
+        {axis === 'Weight' ? (
+          <TextInput
+            value={unit}
+            onChangeText={setUnit}
+            placeholder="kg"
+            placeholderTextColor={color.muted}
+            style={[styles.input, styles.unitInput]}
+          />
+        ) : null}
+        <Pressable
+          onPress={() => {
+            onAdd(range);
+            setFrom('');
+            setTo('');
+          }}
+          disabled={!canAdd}
+          accessibilityRole="button"
+          accessibilityLabel="Add this range"
+          style={({ pressed }) => [
+            styles.rangeAdd,
+            !canAdd && styles.rangeAddOff,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="add" size={18} color={canAdd ? '#FFFFFF' : color.muted} />
+        </Pressable>
+      </View>
+      {/* Shown before the tap, because a merchant typing 38 to 45 should see
+          eight values coming rather than find out afterwards. */}
+      {canAdd ? (
+        <Text style={styles.hint}>
+          Adds {range.length}: {range.slice(0, 6).join(', ')}
+          {range.length > 6 ? '…' : ''}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -509,6 +732,65 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: color.forest900, borderColor: color.forest900 },
   chipText: { ...text.small, color: color.body },
   chipTextActive: { color: '#FFFFFF' },
+
+  axisRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
+  axis: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    minHeight: 44,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.line,
+    backgroundColor: color.surface,
+  },
+  axisText: { ...text.small, color: color.ink, fontFamily: font.medium },
+
+  scale: {
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.line,
+    backgroundColor: color.surface,
+  },
+  scaleText: { ...text.small, color: color.ink },
+
+  palette: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
+  swatch: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swatchTaken: { opacity: 0.55 },
+  swatchDot: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.line,
+  },
+
+  rangeLabel: { marginTop: space.md },
+  rangeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xs },
+  rangeInput: { flex: 1, minWidth: 0 },
+  unitInput: { width: 64 },
+  rangeTo: { ...text.small, color: color.muted },
+  rangeAdd: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: color.primary,
+  },
+  rangeAddOff: { backgroundColor: color.sunk },
 
   options: { gap: space.md },
   variant: {

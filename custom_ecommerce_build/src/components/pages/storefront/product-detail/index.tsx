@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { formatCurrency } from '@core/money';
+import { colourOf, isColourAxis } from '@core/option-values';
 import {
   activeVariants,
   hasVariants,
@@ -66,6 +67,20 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
   const options = activeVariants(product);
   const sellsByVariant = hasVariants(product);
+
+  /**
+   * Draw the choices as swatches when they name colours.
+   *
+   * Read from the value itself rather than a stored hex, so it works on every
+   * product that already exists and needed no migration to show a circle. Only
+   * when EVERY live option resolves — a half-swatched row where "Navy" is a
+   * circle and "Two-tone" is a word reads as broken, and the words are a fine
+   * fallback, which is all this page did until now.
+   */
+  const asSwatches =
+    isColourAxis(product.optionName) &&
+    options.length > 0 &&
+    options.every((option) => colourOf(option.value));
 
   // Preselect when there is only one live option — making someone click the
   // single available size to enable a button is friction for nothing.
@@ -194,6 +209,47 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   {options.map((option) => {
                     const soldOut = option.stock <= 0;
                     const active = option.id === selectedId;
+                    const swatch = asSwatches ? colourOf(option.value) : null;
+
+                    if (swatch) {
+                      return (
+                        <button
+                          key={option.id}
+                          type='button'
+                          onClick={() => setSelectedId(option.id)}
+                          disabled={soldOut}
+                          aria-pressed={active}
+                          // The name carries the meaning, so it has to be the
+                          // accessible name: a circle of colour is nothing to a
+                          // screen reader, and nothing to anyone who cannot
+                          // distinguish two of these.
+                          aria-label={soldOut ? `${option.value} — sold out` : option.value}
+                          title={option.value}
+                          className={cn(
+                            'relative size-9 rounded-full transition-transform',
+                            active && 'scale-110',
+                            soldOut && 'opacity-40',
+                          )}
+                          style={{
+                            background: swatch,
+                            border: '1px solid var(--st-line)',
+                            outline: active ? '2px solid var(--st-ink)' : undefined,
+                            outlineOffset: '2px',
+                          }}
+                        >
+                          {soldOut ? (
+                            // A line through the swatch, since a struck-through
+                            // colour has no text to strike.
+                            <span
+                              aria-hidden
+                              className='absolute inset-0 m-auto h-px w-[130%] origin-center -rotate-45'
+                              style={{ background: 'var(--st-ink)' }}
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    }
+
                     return (
                       <button
                         key={option.id}
