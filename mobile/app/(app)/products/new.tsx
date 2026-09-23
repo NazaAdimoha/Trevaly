@@ -15,22 +15,31 @@ import {
   View,
 } from 'react-native';
 
-import { toMinor } from '@core/money';
-
 import { api, toApiError } from '@/api/client';
+import { useQuery } from '@/api/hooks';
+import { categoryListSchema } from '@/api/schemas';
 import { uploadProductImage } from '@/api/upload';
+import {
+  emptyDraft,
+  type ProductDraft,
+  ProductFields,
+  toPayload,
+} from '@/products/form';
 import { useActiveStore } from '@/store/active-store';
 import { color, font, radius, space, text } from '@/theme';
-import { Button, Card, formatNaira } from '@/ui';
+import { Button, Card } from '@/ui';
 
 /**
  * Add a product from the thing in your hand.
  *
  * This is the screen the app exists for: a merchant photographs a dress and it
- * is on their storefront a minute later, without a laptop. Everything else is
- * subordinate to that — the form asks for a name, a price and a stock count and
- * nothing more. Categories, options, SKUs and descriptions are all editable on
- * the web afterwards.
+ * is on their storefront a minute later, without a laptop.
+ *
+ * It used to ask for a name, a price and a count, and send the merchant to the
+ * web dashboard for a description, a category or sizes. That was the wrong
+ * trade: most of these merchants do not have a laptop, so "editable on the web
+ * afterwards" meant "never set". The fields live in `@/products/form`, shared
+ * with the edit screen so the two cannot drift.
  *
  * The price is typed in naira and converted with the shared `toMinor()` — the
  * same function the web form uses. Money is integer kobo everywhere; a rounding
@@ -40,14 +49,17 @@ export default function NewProductScreen() {
   const router = useRouter();
   const { slug } = useActiveStore();
 
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('1');
-  const [live, setLive] = useState(true);
+  const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [picked, setPicked] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const categories = useQuery(
+    slug ? `/stores/${slug}/categories` : null,
+    categoryListSchema,
+    [slug],
+  );
 
   const pick = async (from: 'camera' | 'library') => {
     const permission =
@@ -78,26 +90,16 @@ export default function NewProductScreen() {
     setImageUri(result.assets[0].uri);
   };
 
-  const nairaPreview = (() => {
-    const value = Number(price.replace(/[^\d.]/g, ''));
-    return Number.isFinite(value) && value > 0 ? formatNaira(toMinor(value)) : null;
-  })();
-
   const submit = async () => {
     if (!slug) return;
     setError(null);
 
-    const trimmed = name.trim();
-    if (trimmed.length < 2) return setError('Give the product a name.');
+    // Validated before the upload, so a form error never costs a merchant an
+    // image upload over mobile data first.
+    const built = toPayload(draft, []);
+    if ('error' in built) return setError(built.error);
 
-    const priceKobo = toMinor(Number(price.replace(/[^\d.]/g, '')));
-    if (!Number.isFinite(priceKobo) || priceKobo < 1) {
-      return setError('Enter a price greater than zero.');
-    }
-
-    const stockCount = Number(stock.replace(/[^\d]/g, '') || '0');
     setBusy(true);
-
     try {
       // Image first: if the upload fails the merchant still has the form, with
       // everything they typed in it.
@@ -106,19 +108,7 @@ export default function NewProductScreen() {
         imageUrls.push(await uploadProductImage(slug, picked));
       }
 
-      await api.post(`/stores/${slug}/products`, {
-        name: trimmed,
-        slug: slugify(trimmed),
-        description: '',
-        sku: '',
-        priceKobo,
-        stock: stockCount,
-        imageUrls,
-        isActive: live,
-        optionName: '',
-        variants: [],
-      });
-
+      await api.post(`/stores/${slug}/products`, { ...built.payload, imageUrls });
       router.back();
     } catch (err) {
       setError(toApiError(err).message);
@@ -159,53 +149,11 @@ export default function NewProductScreen() {
           </View>
         </Card>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Ankara midi dress"
-            placeholderTextColor={color.muted}
-            style={styles.input}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Price</Text>
-          <TextInput
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="numeric"
-            placeholder="25000"
-            placeholderTextColor={color.muted}
-            style={styles.input}
-          />
-          {nairaPreview ? (
-            <Text style={styles.hint}>Customers will see {nairaPreview}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>How many do you have?</Text>
-          <TextInput
-            value={stock}
-            onChangeText={setStock}
-            keyboardType="number-pad"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={styles.switchRow}>
-          <View style={styles.switchText}>
-            <Text style={styles.label}>Show on my storefront</Text>
-            <Text style={styles.hint}>Turn off to save it without publishing.</Text>
-          </View>
-          <Switch
-            value={live}
-            onValueChange={setLive}
-            trackColor={{ true: color.primary, false: color.line }}
-          />
-        </View>
+        <ProductFields
+          draft={draft}
+          onChange={setDraft}
+          categories={categories.data?.items ?? []}
+        />
 
         {error ? (
           <Text style={styles.error} accessibilityRole="alert">
@@ -218,21 +166,9 @@ export default function NewProductScreen() {
           onPress={() => void submit()}
           busy={busy}
         />
-        <Text style={styles.footnote}>
-          Options, categories and descriptions can be added on the web dashboard.
-        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
-
-/** Mirrors the web form's slug derivation so both produce the same URL. */
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 const styles = StyleSheet.create({
@@ -254,21 +190,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
   },
   photoButtonText: { ...text.small, color: color.ink, fontFamily: font.medium },
-  field: { gap: space.xs },
-  label: { ...text.small, color: color.ink, fontFamily: font.medium },
-  hint: { ...text.small, color: color.muted },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: color.line,
-    borderRadius: radius.sm,
-    backgroundColor: color.surface,
-    paddingHorizontal: space.lg,
-    fontSize: 16,
-    color: color.ink,
-  },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
-  switchText: { flex: 1, gap: 2 },
   error: { ...text.small, color: color.danger },
-  footnote: { ...text.small, color: color.muted, textAlign: 'center' },
 });

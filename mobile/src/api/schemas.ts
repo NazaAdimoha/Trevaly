@@ -99,6 +99,23 @@ export const productListSchema = z.looseObject({
   total: z.number().int().optional(),
 });
 
+/** One product as `GET /products/:id` returns it — the edit form's seed. */
+export const productDetailSchema = z.looseObject({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  sku: z.string().nullable(),
+  description: z.string().nullable(),
+  priceKobo: z.number().int(),
+  stock: z.number().int(),
+  isActive: z.boolean(),
+  optionName: z.string().nullable(),
+  categoryId: z.string().nullable(),
+  imageUrls: z.array(z.string()),
+  variants: z.array(productVariantSchema).default([]),
+});
+export type ProductDetail = z.infer<typeof productDetailSchema>;
+
 export const categoryListSchema = z.looseObject({
   items: z.array(
     z.looseObject({ id: z.string(), name: z.string(), slug: z.string() }),

@@ -171,6 +171,9 @@ export default function ProductsScreen() {
           <ProductRow
             product={item}
             cloudName={config?.cloudinaryCloudName ?? null}
+            onPress={() =>
+              router.push({ pathname: '/(app)/products/[id]', params: { id: item.id } })
+            }
           />
         )}
       />
@@ -181,9 +184,11 @@ export default function ProductsScreen() {
 function ProductRow({
   product,
   cloudName,
+  onPress,
 }: {
   product: ProductListItem;
   cloudName: string | null;
+  onPress: () => void;
 }) {
   const thumb = imageUrl(cloudName, product.imageUrls[0], 160);
   const shaped = {
@@ -196,7 +201,14 @@ function ProductRow({
   const range = hasPriceRange(shaped);
 
   return (
-    <View style={styles.row}>
+    // The rows did nothing when tapped, which made the list a wall: a merchant
+    // could see a wrong price and have no way to correct it from the phone.
+    <Pressable
+      onPress={onPress}
+      accessibilityRole='button'
+      accessibilityLabel={`Edit ${product.name}`}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+    >
       {thumb ? (
         <Image source={{ uri: thumb }} style={styles.thumb} />
       ) : (
@@ -224,7 +236,7 @@ function ProductRow({
       </View>
 
       <StockBadge stock={stock} live={product.isActive} />
-    </View>
+    </Pressable>
   );
 }
 
@@ -269,6 +281,7 @@ const styles = StyleSheet.create({
   resultCount: { ...text.small, color: color.muted },
   header: { padding: space.lg },
   list: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.md },
+  rowPressed: { opacity: 0.7 },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',

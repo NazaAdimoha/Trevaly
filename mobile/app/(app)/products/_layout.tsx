@@ -15,6 +15,9 @@ export default function ProductsLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'Products' }} />
       <Stack.Screen name="new" options={{ title: 'Add product', presentation: 'modal' }} />
+      {/* Pushed, not presented as a modal: editing is a place you go back
+          from, and the product's own name belongs in the header. */}
+      <Stack.Screen name="[id]" options={{ title: 'Product' }} />
     </Stack>
   );
 }
