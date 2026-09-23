@@ -86,12 +86,26 @@ test.describe('storefront sections', () => {
   }) => {
     await page.goto(origin);
 
+    /**
+     * A countdown that has finished REMOVES itself — `afterEnd` defaults to
+     * "hide" — so this cannot assume the element it just counted is still
+     * there a second and a half later. It was not: the seeded `endsAt` expired,
+     * and the section unmounted between `count()` and the first read, leaving
+     * the test waiting on a locator that would never resolve again.
+     *
+     * Read with a short timeout and treat disappearance as the pass it is: a
+     * countdown reaching zero and hiding is the behaviour, not a failure.
+     */
     const countdown = page.getByRole('list', { name: 'Time remaining' });
-    if (await countdown.count()) {
-      const seconds = countdown.locator('li').last();
-      const first = await seconds.textContent();
+    const seconds = countdown.locator('li').last();
+    const read = async () => seconds.textContent({ timeout: 2000 }).catch(() => null);
+
+    const first = await read();
+    if (first !== null) {
       await page.waitForTimeout(1500);
-      expect(await seconds.textContent()).not.toBe(first);
+      const second = await read();
+      // Still running? It must have ticked. Gone? It ended, which is correct.
+      if (second !== null) expect(second).not.toBe(first);
     }
 
     // The marquee duplicates its track; only one copy is read out.

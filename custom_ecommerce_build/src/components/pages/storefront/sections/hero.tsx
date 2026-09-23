@@ -56,8 +56,12 @@ export function HeroSection({
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const image = cloudinaryUrl(cloud, settings.image, { width: 2000 });
   const video = cloudinaryVideoUrl(cloud, settings.video, { width: 1600 });
+  // The merchant's own image wins as the poster. A frame pulled from the video
+  // is only used when they gave no image, because it is derived from the same
+  // id as the video — so whenever the video is wrong, the poster is wrong in
+  // exactly the same way and cannot rescue it.
   const poster =
-    cloudinaryVideoPoster(cloud, settings.video, { width: 1600 }) ?? image ?? undefined;
+    image ?? cloudinaryVideoPoster(cloud, settings.video, { width: 1600 }) ?? undefined;
 
   const align = settings.align ?? 'left';
   const overlay = Math.min(80, Math.max(0, settings.overlay ?? 30));
@@ -83,6 +87,28 @@ export function HeroSection({
       )}
       style={{ background: 'var(--st-surface)' }}
     >
+      {/* The image is LAYERED UNDER the video, not swapped for it.
+          This used to be either/or, and the failure was ugly: a hero with both
+          set rendered only the <video>, so anything that stopped it playing —
+          a 404, a codec the browser will not decode, a phone refusing autoplay
+          on a data saver — left the section as a flat dark rectangle with the
+          merchant's perfectly good photograph never requested. On a full-height
+          hero that is a black screen.
+
+          Underneath, the image costs nothing it was not already costing: it is
+          the poster too. Now the video is genuinely decorative, and every way
+          it can fail degrades to the picture. */}
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Cloudinary already serves this at the right width, format and quality
+        <img
+          src={image}
+          alt=''
+          className='absolute inset-0 -z-20 size-full object-cover'
+          fetchPriority='high'
+          decoding='async'
+        />
+      ) : null}
+
       {video ? (
         <video
           className='absolute inset-0 -z-10 size-full object-cover'
@@ -96,15 +122,6 @@ export function HeroSection({
         >
           <source src={video} />
         </video>
-      ) : image ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Cloudinary already serves this at the right width, format and quality
-        <img
-          src={image}
-          alt=''
-          className='absolute inset-0 -z-10 size-full object-cover'
-          fetchPriority='high'
-          decoding='async'
-        />
       ) : null}
 
       {hasMedia && overlay > 0 ? (

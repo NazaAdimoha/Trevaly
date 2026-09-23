@@ -104,7 +104,17 @@ export function FieldControl({
         // an upload path, and that is blocked on the plan rather than on code —
         // Cloudinary rations HEVC transcoding on the Free tier hard enough that
         // even a HEIC photo bounces with `429 Out of Processing Capacity`.
-        return <NotYet />;
+        //
+        // Clearing one is still offered, and has to be: the earlier picker
+        // wrote IMAGE ids into this field, and the storefront then asks
+        // Cloudinary for them as video and gets a 404. Without this, a merchant
+        // could see the result and have no way to undo it.
+        return (
+          <NotYet
+            value={value === null || value === undefined ? null : asString(value)}
+            onClear={() => onChange(null)}
+          />
+        );
 
       case 'datetime':
         return <WhenField value={asString(value)} onChange={onChange} />;
@@ -157,14 +167,22 @@ export function FieldControl({
 const asString = (value: unknown) => (typeof value === 'string' ? value : '');
 
 /** A field the storefront supports but the app cannot fill in yet. */
-function NotYet() {
+function NotYet({ value, onClear }: { value: string | null; onClear: () => void }) {
   return (
-    <View style={styles.notYet}>
-      <Ionicons name='information-circle-outline' size={18} color={color.muted} />
-      <Text style={styles.help}>
-        Video backgrounds are not editable from the app yet. Your shop will play
-        one if it is already set.
-      </Text>
+    <View>
+      <View style={styles.notYet}>
+        <Ionicons name='information-circle-outline' size={18} color={color.muted} />
+        <Text style={styles.help}>
+          {value
+            ? 'A video background is set. It cannot be changed from the app yet — only removed.'
+            : 'Video backgrounds are not editable from the app yet.'}
+        </Text>
+      </View>
+      {value ? (
+        <Pressable onPress={onClear} accessibilityRole='button'>
+          <Text style={styles.remove}>Remove video</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
