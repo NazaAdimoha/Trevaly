@@ -3,7 +3,8 @@ import type { NextFetchEvent, NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { resolveHostname } from '@/lib/domains/resolve';
-
+// Resolved in one place, from either variable — see `@/lib/root-domain`.
+import { ROOT_DOMAIN } from '@/lib/root-domain';
 /**
  * Tenant routing. (Next.js 16 renamed `middleware.ts` -> `proxy.ts`; it now
  * runs on the Node.js runtime, which is why tenant resolution can query the
@@ -34,7 +35,6 @@ import { resolveHostname } from '@/lib/domains/resolve';
  * on the response never reaches the destination.
  */
 
-const ROOT_DOMAIN = process.env.ROOT_DOMAIN ?? 'yourbrand.com';
 
 const TENANT_HEADER = 'x-tenant-slug';
 const PROXY_ONLY_HEADERS = [TENANT_HEADER, 'x-internal-key', 'x-client-ip'];

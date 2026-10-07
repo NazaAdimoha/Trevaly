@@ -9,6 +9,7 @@ import useSWR from 'swr';
 import { slugifyTenantName } from '@core/validation/tenant';
 
 import { api, apiFetcher, extractErrorMessage } from '@/lib/api';
+import { ROOT_DOMAIN } from '@/lib/root-domain';
 
 import Button from '@/components/buttons/Button';
 import { InputField } from '@/components/fields/InputField';
@@ -45,7 +46,7 @@ function SlugSync() {
 
 function StorefrontPreview() {
   const { values } = useFormikContext<ITenantOnboardingValues>();
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'yourbrand.com';
+  const rootDomain = ROOT_DOMAIN;
 
   if (!values.slug) return null;
 

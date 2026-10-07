@@ -1,3 +1,5 @@
+import { ROOT_DOMAIN } from '@/lib/root-domain';
+
 /**
  * Everything the marketing site says that is a *fact about the business*
  * rather than a fact about the design.
@@ -15,7 +17,7 @@
 export const BRAND = {
   name: '[BRAND]',
   /** Rendered in copy as the storefront address a tenant is given. */
-  domain: process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'yourbrand.com',
+  domain: ROOT_DOMAIN,
   tagline: 'Online stores for Nigerian businesses.',
   whatsapp: '[YOUR WHATSAPP NUMBER]',
   email: '[YOUR EMAIL]',

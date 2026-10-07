@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+import { ROOT_DOMAIN } from '@/lib/root-domain';
+
 import ROUTES from '@/constant/routes';
 
 /**
@@ -14,7 +16,7 @@ import ROUTES from '@/constant/routes';
  * for by name.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'yourbrand.com';
+  const rootDomain = ROOT_DOMAIN;
   const base = `https://${rootDomain}`;
   const lastModified = new Date();
 

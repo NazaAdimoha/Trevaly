@@ -29,9 +29,8 @@ import { Confetti, CountUpAmount, SuccessMark } from './celebration';
 /**
  * `received` — the payment went through, but for an order the store had already
  * closed. It is recorded and flagged for the store, which will send the order or
- * refund. Before this state existed the page fell into `pending` ("being
- * confirmed… you will get an email once it clears"), a promise nothing would
- * ever keep.
+ * refund. Before this state existed the page fell into `pending`, which told a
+ * shopper to wait for an email — and no part of this system sends one.
  */
 type VerifyState = 'verifying' | 'paid' | 'pending' | 'received';
 
@@ -211,9 +210,17 @@ function PaidState({ order }: { order: ConfirmedOrder | null }) {
               className='st-enter st-hairline mt-8 border-t pt-6'
               style={{ '--st-index': 4 } as never}
             >
+              {/* Says what is TRUE. Nothing in this system sends an email —
+                  `api/src/integrations` has Paystack and Cloudinary and no mail
+                  provider — so "a receipt is on its way" was a promise nobody
+                  kept, and the shopper who waited for it had no reason to save
+                  their order number. The address is still shown, because a
+                  shopper who mistyped it should be able to see that now rather
+                  than discover it when the store cannot reach them. */}
               <p className='st-muted text-sm'>
-                A receipt is on its way to <strong>{order.maskedEmail}</strong>. Keep
-                order #{order.orderNumber} to hand if you need to ask about it.
+                Keep order <strong>#{order.orderNumber}</strong> — it is your
+                reference if you need to ask about this order. {tenant.name} has
+                your email as <strong>{order.maskedEmail}</strong>.
               </p>
             </div>
           </>
@@ -471,7 +478,8 @@ function PendingState({ reference }: { reference: string }) {
     >
       <p className='st-muted mt-3 text-sm leading-relaxed'>
         If your card was charged, your order is safe — we are still confirming it
-        with the bank. You will get an email once it clears.
+        with the bank. Reload this page in a moment, or message {tenant.name}
+        with the reference below.
       </p>
       <Reference value={reference} />
 

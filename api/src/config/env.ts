@@ -26,6 +26,9 @@ const optional = <T extends z.ZodType>(schema: T) =>
  * map). A missing secret discovered at boot is a failed deploy that Render rolls
  * back; the same secret discovered on the first checkout is an outage.
  */
+/** The stand-in domain a fresh checkout works with, and production will not. */
+const PLACEHOLDER_ROOT_DOMAIN = 'yourbrand.com';
+
 const envSchema = z
   .object({
     NODE_ENV: z
@@ -59,7 +62,17 @@ const envSchema = z
      */
     CLERK_JWT_KEY: optional(z.string()),
 
-    ROOT_DOMAIN: z.string().min(1).default('yourbrand.com'),
+    /**
+     * The domain everything is addressed from.
+     *
+     * It decides every storefront URL (`{slug}.{ROOT_DOMAIN}`), the dashboard
+     * URL the mobile app deep-links to, the canonical in every page's head, and
+     * the sitemap. The default is a PLACEHOLDER, kept so local development and
+     * the test suite need no setup — and refused in production below, because
+     * shipping with it is not a degraded mode, it is every link in the product
+     * pointing at a domain that is not yours.
+     */
+    ROOT_DOMAIN: z.string().min(1).default(PLACEHOLDER_ROOT_DOMAIN),
 
     // Checkout, verification, onboarding and the webhook signature all need it,
     // so the API does not start without it.
@@ -98,6 +111,14 @@ const envSchema = z
         path: ['INTERNAL_API_KEY'],
         message:
           'INTERNAL_API_KEY is required in production: custom domains and client IPs depend on it',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.ROOT_DOMAIN === PLACEHOLDER_ROOT_DOMAIN) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ROOT_DOMAIN'],
+        message:
+          'ROOT_DOMAIN is still the placeholder: set your real domain, or every storefront URL, canonical and dashboard link points somewhere you do not own',
       });
     }
     if (env.NODE_ENV === 'production' && !env.REDIS_URL) {

@@ -15,6 +15,8 @@
  * Prisma import, so it can be unit-tested and called from anywhere.
  */
 
+import { ROOT_DOMAIN } from '@/lib/root-domain';
+
 export type CanonicalTenant = {
   slug: string;
   customDomain: string | null;
@@ -23,7 +25,7 @@ export type CanonicalTenant = {
 
 export function tenantOrigin(
   tenant: CanonicalTenant,
-  rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'yourbrand.com',
+  rootDomain = ROOT_DOMAIN,
 ): string {
   if (tenant.customDomain && tenant.customDomainVerified) {
     return `https://${tenant.customDomain}`;

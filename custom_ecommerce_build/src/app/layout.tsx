@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import '@/styles/globals.css';
 
+import { ROOT_DOMAIN } from '@/lib/root-domain';
 
 /**
  * Document shell for every surface — platform and storefront alike.
@@ -25,7 +26,7 @@ import '@/styles/globals.css';
  * the tenant's own host, or the same catalogue is indexed twice. That override
  * lives in `app/sites/[tenant]/layout.tsx`, which knows the tenant.
  */
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'yourbrand.com';
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(`https://${ROOT_DOMAIN}`),

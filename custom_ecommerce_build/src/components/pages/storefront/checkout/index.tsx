@@ -178,7 +178,10 @@ export default function CheckoutView({
                     inputMode='email'
                     autoComplete='email'
                     placeholder='you@example.com'
-                    hint='Your receipt and order updates go here.'
+                    // Not "your receipt goes here": nothing sends one yet.
+                    // This is how the store reaches a customer about an order,
+                    // which is true today and is why the field is required.
+                    hint={`So ${tenant.name} can reach you about this order.`}
                   />
                   <TextField
                     name='customerPhone'
@@ -187,7 +190,7 @@ export default function CheckoutView({
                     inputMode='tel'
                     autoComplete='tel'
                     placeholder='08031234567'
-                    hint={`How ${tenant.name} reaches you about this delivery.`}
+                    hint='For the rider to call when they are nearby.'
                   />
                 </Section>
 

@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+import { ROOT_DOMAIN } from '@/lib/root-domain';
+
 /**
  * Platform-domain robots.
  *
@@ -12,7 +14,7 @@ import type { MetadataRoute } from 'next';
  * are served by `app/sites/[tenant]/robots.txt/route.ts`.
  */
 export default function robots(): MetadataRoute.Robots {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'yourbrand.com';
+  const rootDomain = ROOT_DOMAIN;
   const isProduction = process.env.VERCEL_ENV
     ? process.env.VERCEL_ENV === 'production'
     : process.env.NODE_ENV === 'production';
