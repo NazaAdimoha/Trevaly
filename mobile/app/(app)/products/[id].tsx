@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { api, toApiError } from '@/api/client';
-import { imageUrl, useAppConfig } from '@/api/config';
+import { useAppConfig } from '@/api/config';
 import { useQuery } from '@/api/hooks';
 import { categoryListSchema, productDetailSchema } from '@/api/schemas';
 import {
@@ -21,8 +21,9 @@ import {
   ProductFields,
   toPayload,
 } from '@/products/form';
+import { ProductPhotos } from '@/products/photos';
 import { useActiveStore } from '@/store/active-store';
-import { color, radius, space, text } from '@/theme';
+import { color, space, text } from '@/theme';
 import { Button, ErrorState, Loading } from '@/ui';
 
 /**
@@ -50,6 +51,7 @@ export default function ProductScreen() {
   );
 
   const [draft, setDraft] = useState<ProductDraft | null>(null);
+  const [photos, setPhotos] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,21 +63,24 @@ export default function ProductScreen() {
    * still in flight. `useQuery` revalidates behind the screen, so that is a
    * real race, not a theoretical one.
    */
-  if (draft === null && product.data) setDraft(draftFrom(product.data));
+  if (draft === null && product.data) {
+    setDraft(draftFrom(product.data));
+    setPhotos(product.data.imageUrls);
+  }
 
   if (product.loading && !draft) return <Loading />;
   if (product.error && !draft) {
     return <ErrorState message={product.error.message} onRetry={() => void product.refresh()} />;
   }
-  if (!draft || !product.data) return <Loading />;
-
-  const cover = imageUrl(config?.cloudinaryCloudName, product.data.imageUrls[0]);
+  if (!draft || !photos || !product.data) return <Loading />;
 
   const save = async () => {
     if (!slug || !id) return;
     setError(null);
 
-    const built = toPayload(draft, product.data!.imageUrls);
+    // The photos as they stand on screen, not as they were loaded: uploads
+    // have already landed in Cloudinary, and a save is what attaches them.
+    const built = toPayload(draft, photos);
     if ('error' in built) return setError(built.error);
 
     setBusy(true);
@@ -125,17 +130,12 @@ export default function ProductScreen() {
       <Stack.Screen options={{ title: product.data.name }} />
 
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps='handled'>
-        {cover ? (
-          <View style={styles.cover}>
-            {/* Photos are still changed when adding, not here — swapping one
-                is a different job from correcting a price, and conflating them
-                is how an edit screen becomes a wall. */}
-            <Text style={styles.coverNote}>
-              {product.data.imageUrls.length} photo
-              {product.data.imageUrls.length === 1 ? '' : 's'}
-            </Text>
-          </View>
-        ) : null}
+        <ProductPhotos
+          publicIds={photos}
+          onChange={setPhotos}
+          storeSlug={slug ?? ''}
+          cloudName={config?.cloudinaryCloudName ?? null}
+        />
 
         <ProductFields
           draft={draft}
@@ -167,13 +167,6 @@ export default function ProductScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: color.ground },
   page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
-  cover: {
-    borderRadius: radius.md,
-    backgroundColor: color.sunk,
-    paddingVertical: space.md,
-    alignItems: 'center',
-  },
-  coverNote: { ...text.small, color: color.muted },
   error: { ...text.small, color: color.danger },
   delete: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   deleteText: { ...text.small, color: color.danger },

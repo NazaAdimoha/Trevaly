@@ -200,6 +200,40 @@ describe.skipIf(!live)('product writes (mobile payload)', () => {
     expect(clash.body.error).toBe('A product with this SKU already exists');
   });
 
+  /**
+   * The edit screen can now add, remove and REORDER photos, and order is
+   * meaning: the first id is the cover used in the grid, the cart, the order
+   * summary and the share card. A PATCH that silently sorted or deduped the
+   * array would move a merchant's cover without them touching it.
+   */
+  it('keeps photo order exactly as the app sends it', async () => {
+    const created = ok(await post(url(), withOptions(`Photos ${sfx}`)), 201) as { id: string };
+
+    const a = `tenants/${SLUG}/products/aaa111`;
+    const b = `tenants/${SLUG}/products/bbb222`;
+    const c = `tenants/${SLUG}/products/ccc333`;
+
+    ok(await patch(url(`/${created.id}`), { imageUrls: [a, b, c] }));
+    expect((await get(url(`/${created.id}`))).body.imageUrls).toEqual([a, b, c]);
+
+    // Promoting the third to cover, which is a reorder and nothing else.
+    ok(await patch(url(`/${created.id}`), { imageUrls: [c, a, b] }));
+    expect((await get(url(`/${created.id}`))).body.imageUrls).toEqual([c, a, b]);
+
+    // And removing the middle one leaves the rest in place.
+    ok(await patch(url(`/${created.id}`), { imageUrls: [c, b] }));
+    expect((await get(url(`/${created.id}`))).body.imageUrls).toEqual([c, b]);
+  });
+
+  it('refuses photos belonging to another store', async () => {
+    const created = ok(await post(url(), withOptions(`Theft ${sfx}`)), 201) as { id: string };
+
+    const refused = await patch(url(`/${created.id}`), {
+      imageUrls: ['tenants/someone-else/products/zzz999'],
+    });
+    expect(refused.status).toBe(403);
+  });
+
   it('deletes a product that has never been ordered', async () => {
     const created = ok(await post(url(), withOptions(`Gone ${sfx}`)), 201) as { id: string };
 
