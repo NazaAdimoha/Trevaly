@@ -32,7 +32,23 @@ export function TestimonialsSection({
           <h2 className='st-display mb-8 text-2xl md:text-3xl'>{settings.heading}</h2>
         ) : null}
 
-        <ul className='-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0'>
+        {/* Focusable, because on a phone this scrolls and its contents are
+            quotes — no links, no buttons, nothing to tab to. A keyboard or
+            switch user could reach the second review only by scrolling the
+            page past it. `tabIndex=0` makes the strip itself a stop, which is
+            what lets the arrow keys move it. The label is what a screen reader
+            announces on arrival, so it has to say what the strip holds.
+
+            `role="list"` is explicit and load-bearing twice over: a `role` of
+            anything else — `group` was the first attempt — strips the implicit
+            list role and orphans every `<li>` inside it, and Safari drops that
+            role on its own for a list styled with `list-style: none`. */}
+        <ul
+          tabIndex={0}
+          role='list'
+          aria-label={settings.heading || 'Customer reviews'}
+          className='-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0'
+        >
           {items.map((item, index) => {
             const rating = Math.min(5, Math.max(1, Math.round(item.rating ?? 5)));
             return (

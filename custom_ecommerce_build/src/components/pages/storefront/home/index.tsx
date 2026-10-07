@@ -123,7 +123,11 @@ export default function ProductGrid({
 
               <p className='st-product-price mt-1'>
                 {fromPrice ? (
-                  <span className='mr-1 text-[0.85em] font-normal opacity-70'>From</span>
+                  // No `opacity`: muted ink at 70% measured 3.23:1 on white at
+                  // ~12px, where 4.5 is the floor. The token on its own passes,
+                  // and "From" is the word that tells a shopper the price they
+                  // are reading is not the only one.
+                  <span className='st-muted mr-1 text-[0.85em] font-normal'>From</span>
                 ) : null}
                 {formatCurrency(displayPriceKobo(product))}
               </p>

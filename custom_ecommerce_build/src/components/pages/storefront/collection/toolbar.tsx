@@ -102,7 +102,16 @@ export function CollectionToolbar({
           {/* Desktop: sort as a hover/focus menu, in stock as a toggle. */}
           <Link
             href={href({ inStock: !query.inStock })}
-            aria-pressed={query.inStock}
+            // NOT `aria-pressed`: this is a link, and `aria-pressed` is only
+            // valid on a button — axe flags it as critical, and a screen reader
+            // is told about a toggle that is really a navigation. The state
+            // goes in the accessible name instead, which also says what the tap
+            // will DO rather than only what is currently true.
+            aria-label={
+              query.inStock
+                ? 'Showing in-stock items only. Show everything'
+                : 'Show in-stock items only'
+            }
             className={cn(
               'st-control hidden items-center gap-2 px-3 py-2 text-sm md:inline-flex',
             )}

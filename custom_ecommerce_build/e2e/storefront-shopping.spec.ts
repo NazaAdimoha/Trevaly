@@ -52,7 +52,7 @@ test.describe('collection page', () => {
     const total = Number((await count.textContent())?.match(/\d+/)?.[0] ?? 0);
     expect(total).toBeGreaterThan(0);
 
-    await page.getByRole('link', { name: 'In stock only' }).first().click();
+    await page.getByRole('link', { name: 'Show in-stock items only' }).first().click();
     await expect(page).toHaveURL(/inStock=1/);
 
     const filtered = Number((await count.textContent())?.match(/\d+/)?.[0] ?? -1);
@@ -90,7 +90,11 @@ test.describe('all products', () => {
 
     // Every control a category page has, because it is the same component.
     await expect(page.locator('main').getByText(/^\d+ items?$/).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: 'In stock only' }).first()).toBeVisible();
+    // Named for what tapping it DOES — `aria-pressed` is invalid on a link, so
+    // the state lives in the accessible name instead.
+    await expect(
+      page.getByRole('link', { name: 'Show in-stock items only' }).first(),
+    ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Show more per row' })).toBeVisible();
 
     // And the "All" pill is the active one here, not a category.
