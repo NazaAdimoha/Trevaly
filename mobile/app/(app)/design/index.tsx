@@ -181,12 +181,21 @@ export default function DesignScreen() {
 
         <Text style={styles.groupTitle}>Store front</Text>
         <View style={styles.card}>
-          <Toggle
-            label='Announcement bar'
-            note='The strip above your header'
-            value={layout.announcement.enabled}
-            page='home'
-          />
+          <Pressable
+            onPress={() => router.push('/design/storefront')}
+            accessibilityRole='button'
+            style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+          >
+            <View style={styles.rowText}>
+              <Text style={styles.rowLabel}>Announcement bar, header, footer</Text>
+              <Text style={styles.rowNote}>
+                {layout.announcement.enabled
+                  ? layout.announcement.messages[0] || 'Announcement bar is on'
+                  : 'Announcement bar is off'}
+              </Text>
+            </View>
+            <Ionicons name='chevron-forward' size={17} color={color.muted} />
+          </Pressable>
         </View>
 
         {design.publishedAt ? (
@@ -202,37 +211,6 @@ export default function DesignScreen() {
       </ScrollView>
 
       <PublishBar />
-    </View>
-  );
-}
-
-/**
- * A read-only summary row for the chrome, for now.
- *
- * The announcement bar, header, footer and phone tab bar are all editable
- * through the same registry machinery, but they are not sections and need their
- * own screen. Showing the state without pretending it is editable is the honest
- * intermediate step; a control that does nothing is worse than none.
- */
-function Toggle({
-  label,
-  note,
-  value,
-}: {
-  label: string;
-  note: string;
-  value: boolean;
-  page: string;
-}) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowText}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowNote}>{note}</Text>
-      </View>
-      <Text style={[styles.state, value && styles.stateOn]}>
-        {value ? 'On' : 'Off'}
-      </Text>
     </View>
   );
 }

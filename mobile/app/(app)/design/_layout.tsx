@@ -24,6 +24,7 @@ export default function DesignLayout() {
       <Stack.Screen name="index" options={{ title: 'Design' }} />
       <Stack.Screen name="[page]" options={{ title: 'Sections' }} />
       <Stack.Screen name="section" options={{ title: 'Section' }} />
+      <Stack.Screen name="storefront" options={{ title: 'Store front' }} />
     </Stack>
   );
 }

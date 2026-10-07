@@ -229,6 +229,68 @@ describe.skipIf(!live)('storefront layout', () => {
     expect(JSON.stringify(res.body.issues)).toContain('unicorn');
   });
 
+  /**
+   * The chrome shapes the app's "Store front" screen sends.
+   *
+   * `announcementSchema`, `headerSchema`, `footerSchema` and `mobileBarSchema`
+   * are all `.strict()`, so one key the editor invents is a 400 on save rather
+   * than a field that is quietly ignored. Pinning what the screen sends means a
+   * schema change breaks here instead of in a merchant's hands — they ship
+   * through an app store, not a deploy.
+   */
+  it('round-trips everything the Store front screen can edit', async () => {
+    const loaded = (await get(url())) as unknown as { body: LoadedLayout };
+    const chrome = {
+      ...loaded.body.draft,
+      announcement: {
+        enabled: true,
+        messages: ['Free delivery this weekend', 'New season just landed'],
+        href: '/products',
+        dismissible: false,
+        freeShippingThresholdKobo: 5_000_000,
+      },
+      header: {
+        ...(loaded.body.draft.header as Record<string, unknown>),
+        layout: 'floating',
+        sticky: false,
+        transparentOverHero: true,
+        showSearch: false,
+      },
+      footer: {
+        ...(loaded.body.draft.footer as Record<string, unknown>),
+        newsletter: true,
+        newsletterHeading: 'Join the list',
+        newsletterBody: 'Early access, nothing else.',
+        wordmark: false,
+        showPaymentIcons: false,
+        socials: [
+          { platform: 'instagram', href: 'https://instagram.com/shop' },
+          { platform: 'whatsapp', href: 'https://wa.me/2348000000000' },
+        ],
+      },
+      mobileBar: { enabled: true, items: ['home', 'search', 'cart'] },
+    };
+
+    const saved = ok(await put(url('/draft'), { layout: chrome, version: loaded.body.version }));
+    const draft = (saved as { draft: Record<string, never> }).draft;
+
+    expect(draft.announcement).toMatchObject({
+      enabled: true,
+      messages: ['Free delivery this weekend', 'New season just landed'],
+      href: '/products',
+      dismissible: false,
+      freeShippingThresholdKobo: 5_000_000,
+    });
+    expect(draft.header).toMatchObject({ layout: 'floating', sticky: false, showSearch: false });
+    expect(draft.footer).toMatchObject({ newsletterHeading: 'Join the list', wordmark: false });
+    expect(
+      (draft.footer as unknown as { socials: { platform: string }[] }).socials.map(
+        (s) => s.platform,
+      ),
+    ).toEqual(['instagram', 'whatsapp']);
+    expect(draft.mobileBar).toMatchObject({ enabled: true, items: ['home', 'search', 'cart'] });
+  });
+
   it('reverts a draft back to what shoppers see', async () => {
     const loaded = ok(await get(url())) as LoadedLayout;
     ok(
